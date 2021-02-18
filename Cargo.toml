@@ -1,0 +1,22 @@
+cargo-features = ["resolver"]
+
+[workspace]
+
+exclude = [
+	"vendor/subxt",
+	"vendor/webpki",
+	"vendor/ring",
+	"vendor/native-nostd-hasher",
+	"vendor/jsonrpsee"
+]
+
+members = [
+	"collator",
+	"collator/runtime",
+	"common/types",
+	"pallets/phala",
+	"pallets/mining_staking",
+	"pallets/claim"
+]
+
+resolver = "2"

@@ -1,0 +1,63 @@
+[package]
+authors = ['Phala Network']
+edition = '2018'
+name = 'pallet-phala'
+version = "3.2.6"
+license = "Apache 2.0"
+homepage = "https://phala.network/"
+repository = "https://github.com/Phala-Network/phala-blockchain"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+serde = { version = "1.0.101", default-features = false, optional = true }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+sp-io = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, optional = true }
+phala-types = { default-features = false, path = "../../common/types" }
+
+pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+
+chrono = { version = "0.4", default-features = false }
+itertools = { version = "0.8", default-features = false }
+untrusted = { version = "0.7" }
+base64 = { version = "0.11", default-features = false, features = ["alloc"] }
+hex = { version = "0.4", default-features = false }
+webpki = { path = "../../vendor/webpki", default-features = false }
+serde_json = { version = "1.0.41", default-features = false, features = ["alloc"] }
+blake2-rfc = { version = "0.2.18", default-features = false }
+
+[dev-dependencies]
+assert_matches = "1.4.0"
+hex-literal = "0.3.1"
+libsecp256k1 = { version = "0.3.2", default-features = false }
+rand = "0.7.3"
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+
+[features]
+default = ['std']
+std = [
+    "serde/std",
+    "codec/std",
+    "sp-runtime/std",
+    "frame-support/std",
+    "frame-system/std",
+    "sp-io/std",
+    "sp-std/std",
+    "sp-core/full_crypto",
+    "frame-benchmarking/std",
+    "pallet-balances/std"
+]
+test = [
+    "sp-core/full_crypto"
+]
+runtime-benchmarks = [
+    "frame-benchmarking"
+]

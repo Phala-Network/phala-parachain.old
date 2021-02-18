@@ -1,0 +1,26 @@
+[package]
+name = "phala-types"
+version = "0.3.0"
+authors = ["Phala Network"]
+edition = "2018"
+
+[dependencies]
+serde = { version = "1.0.101", default-features = false, optional = true }
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, optional = true }
+
+[features]
+default = ["std", "pruntime", "enable_serde"]
+std = [
+    "serde/std",
+    "codec/std",
+    "sp-core/full_crypto",
+]
+enable_serde = [
+	"serde/derive",
+	"serde/alloc"
+]
+pruntime = [
+	"sp-runtime"
+]

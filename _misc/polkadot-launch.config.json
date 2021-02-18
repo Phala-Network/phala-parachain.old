@@ -1,0 +1,61 @@
+{
+	"relaychain": {
+		"bin": "./bin/polkadot",
+		"chain": "rococo-local",
+		"nodes": [
+			{
+				"name": "alice",
+				"wsPort": 9944,
+				"port": 30444
+			},
+			{
+				"name": "bob",
+				"wsPort": 9955,
+				"port": 30555
+			},
+			{
+				"name": "charlie",
+				"wsPort": 9966,
+				"port": 30666
+			}
+		]
+	},
+	"parachains": [
+		{
+			"bin": "./bin/phala-collator",
+			"chain": "local",
+			"id": "2000",
+			"wsPort": 9977,
+			"port": 31200,
+			"balance": "1000000000000000000000",
+			"flags": ["--", "--execution=wasm", "-lruntime=debug", "RUST_BACKTRACE=verbose"]
+		},
+		{
+			"bin": "./bin/phala-collator",
+			"chain": "local",
+			"id": "5000",
+			"wsPort": 9988,
+			"port": 31300,
+			"balance": "1000000000000000000000",
+			"flags": ["--", "--execution=wasm", "-lruntime=debug", "RUST_BACKTRACE=verbose"]
+		}
+	],
+	"simpleParachains": [
+	],
+	"hrmpChannels": [
+		{
+			"sender": "2000",
+			"recipient": "5000",
+			"maxCapacity": 8,
+			"maxMessageSize": 512
+		},
+		{
+			"sender": "5000",
+			"recipient": "2000",
+			"maxCapacity": 8,
+			"maxMessageSize": 512
+		}
+	],
+	"types": {
+	}
+}

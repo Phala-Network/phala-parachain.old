@@ -1,0 +1,61 @@
+[workspace]
+members = [".", "client", "proc-macro", "test-node"]
+
+[package]
+name = "substrate-subxt"
+version = "0.13.0"
+authors = ["Parity Technologies <admin@parity.io>"]
+edition = "2018"
+
+license = "GPL-3.0"
+readme = "README.md"
+repository = "https://github.com/paritytech/substrate-subxt"
+documentation = "https://docs.rs/substrate-subxt"
+homepage = "https://www.parity.io/"
+description = "Submit extrinsics (transactions) to a substrate node via RPC"
+keywords = ["parity", "substrate", "blockchain"]
+include = ["Cargo.toml", "src/**/*.rs", "README.md", "LICENSE"]
+
+[features]
+default = []
+client = ["substrate-subxt-client"]
+
+# enable this feature to run tests which require a local dev chain node
+integration-tests = []
+
+[dependencies]
+log = "0.4.13"
+thiserror = "1.0.23"
+futures = "0.3.10"
+jsonrpsee = { version = "0.0.1", features = ["ws"], path = "../jsonrpsee" }
+num-traits = { version = "0.2.14", default-features = false }
+serde = { version = "1.0.115", features = ["derive"] }
+serde_json = "1.0.57"
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive", "full"] }
+
+frame-metadata = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-version = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+hex = "0.4.2"
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+application-crypto = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", package = "sp-application-crypto" }
+pallet-staking = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+
+sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+substrate-subxt-client = { version = "0.5.0", path = "client", optional = true }
+substrate-subxt-proc-macro = { version = "0.13.0", path = "proc-macro" }
+
+[dev-dependencies]
+async-std = { version = "1.8.0", features = ["attributes"] }
+env_logger = "0.8.2"
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+substrate-subxt-client = { version = "0.5.0", path = "client" }
+tempdir = "0.3.7"
+test-node = { path = "test-node" }
+wabt = "0.10.0"
+assert_matches = "1.4.0"
