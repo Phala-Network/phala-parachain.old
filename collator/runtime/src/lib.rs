@@ -313,6 +313,27 @@ impl xcm_transactor::Config for Runtime {
 	type ParaId = ParachainInfo;
 }
 
+// impl pallet_phala::Config for Runtime {
+// 	type Event = Event;
+// 	type Randomness = RandomnessCollectiveFlip;
+// 	type TEECurrency = Balances;
+// 	type UnixTime = Timestamp;
+// 	type Treasury = Treasury;
+
+// 	// Parameters
+// 	type MaxHeartbeatPerWorkerPerHour = MaxHeartbeatPerWorkerPerHour;
+// 	type RoundInterval = RoundInterval;
+// 	type DecayInterval = DecayInterval;
+// 	type DecayFactor = DecayFactor;
+// 	type InitialReward = InitialReward;
+// 	type TreasuryRation = TreasuryRation;
+// 	type RewardRation = RewardRation;
+// 	type OnlineRewardPercentage = OnlineRewardPercentage;
+
+// 	type XcmExecutor = XcmExecutor<XcmConfig>;
+// 	type AccountIdConverter = LocationConverter;
+// }
+
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,

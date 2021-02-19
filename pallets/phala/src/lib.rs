@@ -32,8 +32,11 @@ extern crate phala_types as types;
 use types::{
 	BlockRewardInfo, MinerStatsDelta, PRuntimeInfo, PayoutPrefs, PayoutReason, RoundInfo,
 	RoundStats, Score, SignedDataType, SignedWorkerMessage, StashInfo, TransferData, WorkerInfo,
-	WorkerMessagePayload, WorkerStateEnum,
+	WorkerMessagePayload, WorkerStateEnum, TransferXTokenData,
 };
+use cumulus_primitives_core::ParaId;
+use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm};
+use xcm_executor::traits::LocationConversion;
 
 // constants
 mod constants;
@@ -83,6 +86,11 @@ pub trait Config: frame_system::Config {
 	type ComputeRewardPercentage: Get<Permill>; // rel: 62.5% post-taxed: 50%
 	type OfflineOffenseSlash: Get<BalanceOf<Self>>;
 	type OfflineReportReward: Get<BalanceOf<Self>>;
+
+	// XCM
+	type XcmExecutor: ExecuteXcm;
+	/// Convert AccountId to MultiLocation
+	type AccountIdConverter: LocationConversion<Self::AccountId>;
 }
 
 decl_storage! {
@@ -230,6 +238,8 @@ decl_event!(
 		CommandPushed(AccountId, u32, Vec<u8>, u64),
 		TransferToTee(AccountId, Balance),
 		TransferToChain(AccountId, Balance, u64),
+		TransferXTokenToChain(AccountId, Vec<u8>, Balance, u64),
+		XcmExecutorFailed(AccountId, Vec<u8>, Balance, u64),
 		WorkerRegistered(AccountId, Vec<u8>, Vec<u8>), // stash, identity_key, machine_id
 		WorkerUnregistered(AccountId, Vec<u8>),        // stash, machine_id
 		Heartbeat(AccountId, u32),
@@ -264,6 +274,7 @@ decl_error! {
 		InvalidRuntimeInfoHash,
 		MinerNotFound,
 		BadMachineId,
+		BadXCMLocation,
 		InvalidPubKey,
 		InvalidSignature,
 		InvalidSignatureBadLen,
@@ -594,6 +605,45 @@ decl_module! {
 			// Announce the successful execution
 			IngressSequence::insert(CONTRACT_ID, sequence + 1);
 			Self::deposit_event(RawEvent::TransferToChain(transfer_data.data.dest, transfer_data.data.amount, sequence + 1));
+			Ok(())
+		}
+
+		#[weight = 0]
+		fn transfer_x_token_to_chain(origin, data: Vec<u8>) -> dispatch::DispatchResult {
+			const CONTRACT_ID: u32 = 3;
+			let who = ensure_signed(origin.clone())?;
+
+			let transfer_data: TransferXTokenData<<T as frame_system::Config>::AccountId, BalanceOf<T>>
+				= Decode::decode(&mut &data[..]).map_err(|_| Error::<T>::InvalidInput)?;
+			// Check sequence
+			let sequence = IngressSequence::get(CONTRACT_ID);
+			ensure!(transfer_data.data.sequence == sequence + 1, Error::<T>::BadMessageSequence);
+			// Contract key
+			ensure!(ContractKey::contains_key(CONTRACT_ID), Error::<T>::InvalidContract);
+			let pubkey = ContractKey::get(CONTRACT_ID);
+			// Validate TEE signature
+			Self::verify_signature(&pubkey, &transfer_data)?;
+
+			// build crosschain transfer XCM message
+			let xcm = Self::build_xtoken_transfering_xcm(
+				transfer_data.data.x_currency_id,
+				transfer_data.data.para_id,
+				transfer_data.data.dest,
+				transfer_data.data.dest_network,
+				transfer_data.data.amount
+			);
+			if xcm != None {
+				let xcm_origin =
+				T::AccountIdConverter::try_into_location(who.clone()).map_err(|_| Error::<T>::BadXCMLocation)?;
+				match T::XcmExecutor::execute_xcm(xcm_origin, xcm) {
+					Ok(_) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.x_currency_id.into(), transfer_data.data.amount, sequence + 1)),
+					Err(err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.x_currency_id.into(), transfer_data.data.amount, sequence + 1)),
+				}
+	
+				// Announce the successful execution
+				IngressSequence::insert(CONTRACT_ID, sequence + 1);
+			}
+
 			Ok(())
 		}
 
@@ -1363,6 +1413,41 @@ impl<T: Config> Module<T> {
 		let to_sub = cmp::min(amount, Fire2::<T>::get(dest));
 		Fire2::<T>::mutate(dest, |x| *x -= to_sub);
 		AccumulatedFire2::<T>::mutate(|x| *x -= to_sub);
+	}
+
+	fn build_xtoken_transfering_xcm(
+		currency_id: XCurrencyId,
+		para_id: ParaId,
+		dest: &T::AccountId,
+		dest_network: NetworkId,
+		amount: T::Balance
+	) -> Some(Xcm) {
+		// only support transfer parachain reserve token back to it's origin netowrk
+		if let ChainId::Parachain(reserve_chain) = currency_id.chain_id {
+			Xcm::WithdrawAsset {
+				assets: vec![MultiAsset::ConcreteFungible {
+					id: currency_id.into(),
+					amount: amount.into(),
+				}],
+				effects: vec![Order::InitiateReserveWithdraw {
+					assets: vec![MultiAsset::All],
+					reserve: Junction::Parachain {
+						id: reserve_chain.into(),
+					}
+					.into(),
+					effects: vec![Order::DepositAsset {
+						assets: vec![MultiAsset::All],
+						dest: Junction::AccountId32 {
+							network: dest_network,
+							id: dest.into(),
+						}
+						.into(),
+					}],
+				}
+			}
+		} else {
+			None
+		}
 	}
 }
 
