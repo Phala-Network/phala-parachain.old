@@ -93,3 +93,4 @@ std = [
 	"pallet-claim/std",
 	"pallet-mining-staking/std"
 ]
+native-nostd = ["native-nostd-hasher"]

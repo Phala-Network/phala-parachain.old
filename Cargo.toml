@@ -7,7 +7,8 @@ exclude = [
 	"vendor/webpki",
 	"vendor/ring",
 	"vendor/native-nostd-hasher",
-	"vendor/jsonrpsee"
+	"vendor/jsonrpsee",
+	"pruntime"
 ]
 
 members = [
@@ -16,7 +17,8 @@ members = [
 	"common/types",
 	"pallets/phala",
 	"pallets/mining_staking",
-	"pallets/claim"
+	"pallets/claim",
+	"phost"
 ]
 
 resolver = "2"
