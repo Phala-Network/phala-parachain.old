@@ -1282,19 +1282,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cumulus-pallet-xcm-handler"
-version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#e5f8fd4e34e47e0559dc650f2f237e7a2f3a60a1"
-dependencies = [
- "cumulus-primitives-core",
- "frame-support",
- "frame-system",
- "parity-scale-codec",
- "sp-std",
- "xcm",
-]
-
-[[package]]
 name = "cumulus-primitives-core"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#e5f8fd4e34e47e0559dc650f2f237e7a2f3a60a1"
@@ -5089,7 +5076,6 @@ name = "phala-parachain-runtime"
 version = "0.0.1"
 dependencies = [
  "cumulus-pallet-parachain-system",
- "cumulus-pallet-xcm-handler",
  "cumulus-primitives-core",
  "frame-executive",
  "frame-support",
@@ -5119,6 +5105,8 @@ dependencies = [
  "xcm",
  "xcm-builder",
  "xcm-executor",
+ "xcm-handler",
+ "xcm-transactor",
 ]
 
 [[package]]
@@ -10670,6 +10658,36 @@ dependencies = [
  "sp-runtime",
  "sp-std",
  "xcm",
+]
+
+[[package]]
+name = "xcm-handler"
+version = "0.1.0"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
+]
+
+[[package]]
+name = "xcm-transactor"
+version = "0.1.0"
+dependencies = [
+ "cumulus-primitives-core",
+ "frame-support",
+ "frame-system",
+ "parity-scale-codec",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]

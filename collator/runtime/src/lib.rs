@@ -31,7 +31,10 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
-use sp_std::prelude::*;
+use sp_std::{
+	collections::btree_map::BTreeMap,
+	prelude::*,
+};
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -65,6 +68,7 @@ use xcm_executor::{
 	traits::{IsConcrete, NativeAsset},
 	Config, XcmExecutor,
 };
+use xcm_transactor::{AssetLocationFilter, ConcreteMatcher, XCurrencyIdConverter};
 
 pub type SessionHandlers = ();
 
@@ -233,8 +237,8 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
 	type SelfParaId = parachain_info::Module<Runtime>;
-	type DownwardMessageHandlers = ();
-	type HrmpMessageHandlers = ();
+	type DownwardMessageHandlers = XcmHandler;
+	type HrmpMessageHandlers = XcmHandler;
 }
 
 impl parachain_info::Config for Runtime {}
@@ -242,33 +246,24 @@ impl parachain_info::Config for Runtime {}
 parameter_types! {
 	pub const Location: MultiLocation = MultiLocation::X1(Junction::Parent);
 	pub Network: NetworkId = NetworkId::Named("phala".into());
-	pub RelayChainOrigin: Origin = cumulus_pallet_xcm_handler::Origin::Relay.into();
+	pub RelayChainOrigin: Origin = xcm_handler::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Junction::Parachain {
 		id: ParachainInfo::parachain_id().into()
 	}.into();
 }
 
-type LocationConverter = (
+pub type LocationConverter = (
 	ParentIsDefault<AccountId>,
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	AccountId32Aliases<Network, AccountId>,
 );
 
-type LocalAssetTransactor = CurrencyAdapter<
-	// Use this currency:
-	Balances,
-	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<Location>,
-	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
-	LocationConverter,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly):
-	AccountId,
->;
+pub type LocalAssetTransactor = PhalaXcmTransactor;
 
-type LocalOriginConverter = (
+pub type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
 	RelayChainAsNative<RelayChainOrigin, Origin>,
-	SiblingParachainAsNative<cumulus_pallet_xcm_handler::Origin, Origin>,
+	SiblingParachainAsNative<xcm_handler::Origin, Origin>,
 	SignedAccountId32AsNative<Network, Origin>,
 );
 
@@ -276,19 +271,46 @@ pub struct XcmConfig;
 impl Config for XcmConfig {
 	type Call = Call;
 	type XcmSender = XcmHandler;
-	// How to withdraw and deposit an asset.
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
-	type IsReserve = NativeAsset;
+	//TODO: might need to add other assets based on orml-tokens
+	type IsReserve = AssetLocationFilter<NativeTokens>;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 }
 
-impl cumulus_pallet_xcm_handler::Config for Runtime {
+impl xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
 	type HrmpMessageSender = ParachainSystem;
+	type AccountIdConverter = LocationConverter;
+}
+
+parameter_types! {
+	pub NativeTokens: BTreeMap<Vec<u8>, MultiLocation> = {
+		let mut t = BTreeMap::new();
+		t.insert("ACA".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 666 }));	// Acala
+		t.insert("AUSD".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 666 }));	// Acala
+		t.insert("XBTC".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 666 }));	// Acala
+		t.insert("LDOT".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 666 }));	// Acala
+		t.insert("PHA".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 30 }));	// Phala
+		t.insert("SDN".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 5000 }));	// Plasm
+		t.insert("PLM".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 5000 }));	// Plasm
+
+		t.insert("PHA2000".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 2000 }));	// test only
+		t.insert("PHA5000".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 5000 }));	// test only
+		t
+	};
+}
+
+impl xcm_transactor::Config for Runtime {
+	type Event = Event;
+	type Matcher = ConcreteMatcher<Location>;
+	type AccountIdConverter = LocationConverter;
+	type XCurrencyIdConverter = XCurrencyIdConverter<NativeTokens>;
+	type OwnedCurrency = Balances;
+	type ParaId = ParachainInfo;
 }
 
 construct_runtime! {
@@ -305,7 +327,8 @@ construct_runtime! {
 		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		ParachainInfo: parachain_info::{Module, Storage, Config},
-		XcmHandler: cumulus_pallet_xcm_handler::{Module, Call, Event<T>, Origin},
+		XcmHandler: xcm_handler::{Module, Event<T>, Origin, Call},
+		PhalaXcmTransactor: xcm_transactor::{Module, Call, Event<T>},
 	}
 }
 
