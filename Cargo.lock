@@ -3875,6 +3875,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "native-nostd-hasher"
+version = "3.0.0"
+dependencies = [
+ "hash256-std-hasher",
+ "sp-core",
+ "sp-runtime",
+ "sp-trie",
+]
+
+[[package]]
 name = "nb-connect"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5094,11 +5104,17 @@ dependencies = [
  "frame-executive",
  "frame-support",
  "frame-system",
+ "native-nostd-hasher",
  "pallet-balances",
+ "pallet-claim",
+ "pallet-collective",
+ "pallet-mining-staking",
+ "pallet-phala",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-timestamp",
  "pallet-transaction-payment",
+ "pallet-treasury",
  "parity-scale-codec",
  "phala-parachain-info",
  "phala-parachain-primitives",
