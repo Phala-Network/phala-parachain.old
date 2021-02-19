@@ -426,6 +426,9 @@ impl pallet_phala::Config for Runtime {
 	type ComputeRewardPercentage = ComputeRewardPercentage;
 	type OfflineOffenseSlash = OfflineOffenseSlash;
 	type OfflineReportReward = OfflineReportReward;
+
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type AccountIdConverter = LocationConverter;
 }
 
 impl pallet_claim::Config for Runtime {

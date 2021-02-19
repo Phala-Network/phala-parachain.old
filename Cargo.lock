@@ -4473,6 +4473,7 @@ dependencies = [
  "base64 0.11.0",
  "blake2-rfc",
  "chrono",
+ "cumulus-primitives-core",
  "frame-benchmarking",
  "frame-support",
  "frame-system",
@@ -4494,6 +4495,8 @@ dependencies = [
  "sp-std",
  "untrusted",
  "webpki 0.21.0",
+ "xcm",
+ "xcm-executor",
 ]
 
 [[package]]
@@ -5232,10 +5235,13 @@ dependencies = [
 name = "phala-types"
 version = "0.3.0"
 dependencies = [
+ "cumulus-primitives-core",
  "parity-scale-codec",
  "serde",
  "sp-core",
  "sp-runtime",
+ "xcm",
+ "xcm-transactor",
 ]
 
 [[package]]
