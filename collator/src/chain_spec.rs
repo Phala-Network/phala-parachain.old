@@ -103,9 +103,9 @@ pub fn staging_test_net(id: ParaId) -> ChainSpec {
 		ChainType::Live,
 		move || {
 			testnet_genesis(
-				hex!["3c908275761663a1284319ac4924adc0252d07cfab7435a6d2385ef47c613924"].into(),
+				hex!["ce4f5981f1b33b5371454c753ac6f3a703e57e1fe20c7b26a1f9bda024008221"].into(),
 				vec![
-					hex!["3c908275761663a1284319ac4924adc0252d07cfab7435a6d2385ef47c613924"].into(),
+					hex!["ce4f5981f1b33b5371454c753ac6f3a703e57e1fe20c7b26a1f9bda024008221"].into(),
 				],
 				id,
 			)

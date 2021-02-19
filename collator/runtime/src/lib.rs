@@ -240,8 +240,8 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 impl parachain_info::Config for Runtime {}
 
 parameter_types! {
-	pub const RococoLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
-	pub const RococoNetwork: NetworkId = NetworkId::Polkadot;
+	pub const Location: MultiLocation = MultiLocation::X1(Junction::Parent);
+	pub Network: NetworkId = NetworkId::Named("phala".into());
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm_handler::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Junction::Parachain {
 		id: ParachainInfo::parachain_id().into()
@@ -251,14 +251,14 @@ parameter_types! {
 type LocationConverter = (
 	ParentIsDefault<AccountId>,
 	SiblingParachainConvertsVia<Sibling, AccountId>,
-	AccountId32Aliases<RococoNetwork, AccountId>,
+	AccountId32Aliases<Network, AccountId>,
 );
 
 type LocalAssetTransactor = CurrencyAdapter<
 	// Use this currency:
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RococoLocation>,
+	IsConcrete<Location>,
 	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
 	LocationConverter,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
@@ -269,7 +269,7 @@ type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
 	RelayChainAsNative<RelayChainOrigin, Origin>,
 	SiblingParachainAsNative<cumulus_pallet_xcm_handler::Origin, Origin>,
-	SignedAccountId32AsNative<RococoNetwork, Origin>,
+	SignedAccountId32AsNative<Network, Origin>,
 );
 
 pub struct XcmConfig;
