@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use parachain_runtime::{
-	CouncilConfig,
+	CouncilConfig, IndicesConfig,
 };
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
@@ -142,6 +142,9 @@ fn testnet_genesis(
 				.cloned()
 				.map(|k| (k, 1 << 60))
 				.collect(),
+		}),
+		pallet_indices: Some(IndicesConfig {
+			indices: vec![],
 		}),
 		pallet_sudo: Some(parachain_runtime::SudoConfig { key: root_key }),
 		parachain_info: Some(parachain_runtime::ParachainInfoConfig { parachain_id: id }),
