@@ -5211,7 +5211,6 @@ dependencies = [
  "pallet-balances",
  "pallet-claim",
  "pallet-collective",
- "pallet-indices",
  "pallet-mining-staking",
  "pallet-phala",
  "pallet-randomness-collective-flip",
