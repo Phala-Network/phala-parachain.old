@@ -75,13 +75,10 @@ impl Runtime for PhalaNodeRuntime {
 
     fn register_type_sizes(event_type_registry: &mut EventTypeRegistry<Self>) {
         event_type_registry.with_system();
-        event_type_registry.with_contracts();
         event_type_registry.with_sudo();
 
         event_type_registry.with_phala_module();
         event_type_registry.with_balances();
-        event_type_registry.with_staking();
-        event_type_registry.with_session();
         register_default_type_sizes(event_type_registry);
     }
 }
@@ -92,7 +89,7 @@ impl System for PhalaNodeRuntime {
     type Hash = sp_core::H256;
     type Hashing = BlakeTwo256;
     type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
-    type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
+    type Address = sp_runtime::MultiAddress<Self::AccountId, ()>;
     type Header = Header<Self::BlockNumber, BlakeTwo256>;
     type Extrinsic = OpaqueExtrinsic;
     type AccountData = AccountData<<Self as Balances>::Balance>;
@@ -102,16 +99,7 @@ impl Balances for PhalaNodeRuntime {
     type Balance = u128;
 }
 
-impl Contracts for PhalaNodeRuntime {}
-
-impl Staking for PhalaNodeRuntime {}
-
 impl Sudo for PhalaNodeRuntime {}
-
-impl Session for PhalaNodeRuntime {
-    type ValidatorId = <Self as System>::AccountId;
-    type Keys = BasicSessionKeys;
-}
 
 impl phala::PhalaModule for PhalaNodeRuntime {}
 

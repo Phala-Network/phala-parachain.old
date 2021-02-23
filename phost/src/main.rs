@@ -553,8 +553,8 @@ async fn bridge(args: Args) -> Result<(), Error> {
 
     // Connect to substrate
     let client = subxt::ClientBuilder::<Runtime>::new()
-        .set_url(args.substrate_ws_endpoint.clone())
         .skip_type_sizes_check()
+        .set_url(args.substrate_ws_endpoint.clone())
         .build().await?;
     let events_decoder = client.events_decoder();
     println!("Connected to substrate at: {}", args.substrate_ws_endpoint.clone());

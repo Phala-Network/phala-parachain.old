@@ -5257,7 +5257,6 @@ dependencies = [
  "hyper 0.13.10",
  "pallet-balances",
  "pallet-grandpa",
- "pallet-indices",
  "parity-scale-codec",
  "phala-types",
  "rand 0.7.3",

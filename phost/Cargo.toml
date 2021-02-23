@@ -30,7 +30,7 @@ sc-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch 
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 
 pallet-grandpa = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+# pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 balances = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", package = "pallet-balances" }
 sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
