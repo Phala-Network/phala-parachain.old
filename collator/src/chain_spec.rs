@@ -22,6 +22,9 @@ use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
+use parachain_runtime::{
+	CouncilConfig,
+};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
 pub type ChainSpec = sc_service::GenericChainSpec<parachain_runtime::GenesisConfig, Extensions>;
@@ -142,6 +145,9 @@ fn testnet_genesis(
 		}),
 		pallet_sudo: Some(parachain_runtime::SudoConfig { key: root_key }),
 		parachain_info: Some(parachain_runtime::ParachainInfoConfig { parachain_id: id }),
+		pallet_collective_Instance1: Some(CouncilConfig::default()),
+		pallet_treasury: Some(Default::default()),
+		pallet_phala: Some(Default::default()),
 	}
 }
 

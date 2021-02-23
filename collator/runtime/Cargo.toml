@@ -33,6 +33,14 @@ pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 
+pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-phala = { path = "../../pallets/phala", package = "pallet-phala", default-features = false }
+pallet-claim = { path = "../../pallets/claim", package = "pallet-claim", default-features = false }
+pallet-mining-staking = { path = "../../pallets/mining_staking", package = "pallet-mining-staking", default-features = false }
+
+native-nostd-hasher = { path = "../../vendor/native-nostd-hasher", optional = true }
+
 # Cumulus dependencies
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
@@ -82,4 +90,10 @@ std = [
 	"xcm-executor/std",
 	"xcm-handler/std",
 	"xcm-transactor/std",
+	"pallet-collective/std",
+	"pallet-treasury/std",
+	"pallet-phala/std",
+	"pallet-claim/std",
+	"pallet-mining-staking/std"
 ]
+native-nostd = ["native-nostd-hasher"]

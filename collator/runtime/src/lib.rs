@@ -22,12 +22,15 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
-use parachain_primitives::*;
+pub use parachain_primitives::*;
 use sp_api::impl_runtime_apis;
-use sp_core::OpaqueMetadata;
+use sp_core::{
+	OpaqueMetadata,
+	u32_trait::{_1, _2, _3, _4, _5},
+};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{BlakeTwo256, Block as BlockT, IdentityLookup},
+	traits::{Block as BlockT, AccountIdLookup},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,
 };
@@ -49,12 +52,22 @@ pub use frame_support::{
 	},
 	StorageValue,
 };
-use frame_system::limits::{BlockLength, BlockWeights};
+use frame_system::{
+	EnsureRoot, EnsureOneOf,
+	limits::{BlockLength, BlockWeights}
+};
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
-pub use sp_runtime::{Perbill, Permill};
+pub use sp_runtime::{
+	Perbill, Permill, Percent,
+	ModuleId,
+};
+
+// Constant values used within the runtime.
+mod constants;
+use constants::{currency::*};
 
 // XCM imports
 use polkadot_parachain::primitives::Sibling;
@@ -75,6 +88,11 @@ pub type SessionHandlers = ();
 impl_opaque_keys! {
 	pub struct SessionKeys {}
 }
+
+#[cfg(not(feature = "native-nostd-hasher"))]
+type Hasher = sp_runtime::traits::BlakeTwo256;
+#[cfg(feature = "native-nostd-hasher")]
+type Hasher = native_nostd_hasher::blake2::Blake2Hasher;
 
 /// This runtime version.
 pub const VERSION: RuntimeVersion = RuntimeVersion {
@@ -157,7 +175,7 @@ impl frame_system::Config for Runtime {
 	/// The aggregated dispatch type that is available for extrinsics.
 	type Call = Call;
 	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
-	type Lookup = IdentityLookup<AccountId>;
+	type Lookup = AccountIdLookup<AccountId, ()>;
 	/// The index type for storing how many extrinsics an account has signed.
 	type Index = Index;
 	/// The index type for blocks.
@@ -165,9 +183,9 @@ impl frame_system::Config for Runtime {
 	/// The type for hashing blocks and tries.
 	type Hash = Hash;
 	/// The hashing algorithm used.
-	type Hashing = BlakeTwo256;
+	type Hashing = Hasher;
 	/// The header type.
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
+	type Header = generic::Header<BlockNumber, Hasher>;
 	/// The ubiquitous event type.
 	type Event = Event;
 	/// The ubiquitous origin type.
@@ -313,6 +331,114 @@ impl xcm_transactor::Config for Runtime {
 	type ParaId = ParachainInfo;
 }
 
+parameter_types! {
+	pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
+	pub const CouncilMaxProposals: u32 = 100;
+	pub const CouncilMaxMembers: u32 = 100;
+}
+
+type CouncilCollective = pallet_collective::Instance1;
+impl pallet_collective::Config<CouncilCollective> for Runtime {
+	type Origin = Origin;
+	type Proposal = Call;
+	type Event = Event;
+	type MotionDuration = CouncilMotionDuration;
+	type MaxProposals = CouncilMaxProposals;
+	type MaxMembers = CouncilMaxMembers;
+	type DefaultVote = pallet_collective::PrimeDefaultVote;
+	type WeightInfo = pallet_collective::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const ProposalBond: Permill = Permill::from_percent(5);
+	pub const ProposalBondMinimum: Balance = 1 * DOLLARS;
+	pub const SpendPeriod: BlockNumber = 1 * DAYS;
+	pub const Burn: Permill = Permill::from_percent(50);
+	pub const TipCountdown: BlockNumber = 1 * DAYS;
+	pub const TipFindersFee: Percent = Percent::from_percent(20);
+	pub const TipReportDepositBase: Balance = 1 * DOLLARS;
+	pub const DataDepositPerByte: Balance = 1 * CENTS;
+	pub const BountyDepositBase: Balance = 1 * DOLLARS;
+	pub const BountyDepositPayoutDelay: BlockNumber = 1 * DAYS;
+	pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
+	pub const BountyUpdatePeriod: BlockNumber = 14 * DAYS;
+	pub const MaximumReasonLength: u32 = 16384;
+	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
+	pub const BountyValueMinimum: Balance = 5 * DOLLARS;
+}
+
+impl pallet_treasury::Config for Runtime {
+	type ModuleId = TreasuryModuleId;
+	type Currency = Balances;
+	type ApproveOrigin = EnsureOneOf<
+		AccountId,
+		EnsureRoot<AccountId>,
+		pallet_collective::EnsureProportionAtLeast<_3, _5, AccountId, CouncilCollective>
+	>;
+	type RejectOrigin = EnsureOneOf<
+		AccountId,
+		EnsureRoot<AccountId>,
+		pallet_collective::EnsureProportionMoreThan<_1, _2, AccountId, CouncilCollective>
+	>;
+	type Event = Event;
+	type OnSlash = ();
+	type ProposalBond = ProposalBond;
+	type ProposalBondMinimum = ProposalBondMinimum;
+	type SpendPeriod = SpendPeriod;
+	type Burn = Burn;
+	type BurnDestination = ();
+	type SpendFunds = (); // TODO: Bounties;
+	type WeightInfo = pallet_treasury::weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const MaxHeartbeatPerWorkerPerHour: u32 = 2;
+	pub const RoundInterval: BlockNumber = 1 * HOURS;
+	pub const DecayInterval: BlockNumber = 180 * DAYS;
+	pub const DecayFactor: Permill = Permill::from_percent(75);
+	pub const InitialReward: Balance = 129600000 * DOLLARS;
+	pub const TreasuryRation: u32 = 20_000;
+	pub const RewardRation: u32 = 80_000;
+	pub const OnlineRewardPercentage: Permill = Permill::from_parts(375_000);
+	pub const ComputeRewardPercentage: Permill = Permill::from_parts(625_000);
+	pub const OfflineOffenseSlash: Balance = 100 * DOLLARS;
+	pub const OfflineReportReward: Balance = 50 * DOLLARS;
+}
+
+impl pallet_phala::Config for Runtime {
+	type Event = Event;
+	type Randomness = RandomnessCollectiveFlip;
+	type TEECurrency = Balances;
+	type UnixTime = Timestamp;
+	type Treasury = Treasury;
+	type OnRoundEnd = MiningStaking;
+	type ModuleWeightInfo = pallet_phala::weights::SubstrateWeight<Runtime>;
+
+	// Parameters
+	type MaxHeartbeatPerWorkerPerHour = MaxHeartbeatPerWorkerPerHour;
+	type RoundInterval = RoundInterval;
+	type DecayInterval = DecayInterval;
+	type DecayFactor = DecayFactor;
+	type InitialReward = InitialReward;
+	type TreasuryRation = TreasuryRation;
+	type RewardRation = RewardRation;
+	type OnlineRewardPercentage = OnlineRewardPercentage;
+	type ComputeRewardPercentage = ComputeRewardPercentage;
+	type OfflineOffenseSlash = OfflineOffenseSlash;
+	type OfflineReportReward = OfflineReportReward;
+}
+
+impl pallet_claim::Config for Runtime {
+	type Event = Event;
+	type Call = Call;
+	type Currency = Balances;
+}
+
+impl pallet_mining_staking::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+}
+
 construct_runtime! {
 	pub enum Runtime where
 		Block = Block,
@@ -329,13 +455,18 @@ construct_runtime! {
 		ParachainInfo: parachain_info::{Module, Storage, Config},
 		XcmHandler: xcm_handler::{Module, Event<T>, Origin, Call},
 		PhalaXcmTransactor: xcm_transactor::{Module, Call, Event<T>},
+		Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
+		PhalaModule: pallet_phala::{Module, Call, Config<T>, Storage, Event<T>},
+		PhaClaim: pallet_claim::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		MiningStaking: pallet_mining_staking::{Module, Call, Storage, Event<T>},
 	}
 }
 
 /// The address format for describing accounts.
-pub type Address = AccountId;
+pub type Address = sp_runtime::MultiAddress<AccountId, ()>;
 /// Block header type as expected by this runtime.
-pub type Header = generic::Header<BlockNumber, BlakeTwo256>;
+pub type Header = generic::Header<BlockNumber, Hasher>;
 /// Block type as expected by this runtime.
 pub type Block = generic::Block<Header, UncheckedExtrinsic>;
 /// A Block signed with a Justification
