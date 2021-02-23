@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use sp_core::{sr25519, Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 use parachain_primitives::{
-	AccountId, Signature, Balance
+	AccountId, Signature
 };
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
@@ -211,7 +211,17 @@ fn testnet_genesis(
 		pallet_sudo: Some(parachain_runtime::SudoConfig { key: root_key }),
 		parachain_info: Some(parachain_runtime::ParachainInfoConfig { parachain_id: id }),
 		pallet_collective_Instance1: Some(parachain_runtime::CouncilConfig::default()),
+		pallet_collective_Instance2: Some(parachain_runtime::TechnicalCommitteeConfig {
+			members: endowed_accounts.iter()
+				.take((endowed_accounts.len() + 1) / 2)
+				.cloned()
+				.collect(),
+			phantom: Default::default(),
+		}),
+		pallet_membership_Instance1: Some(Default::default()),
 		pallet_treasury: Some(Default::default()),
+		pallet_vesting: Some(Default::default()),
+		pallet_democracy: Some(parachain_runtime::DemocracyConfig::default()),
 		pallet_phala: Some(parachain_runtime::PhalaModuleConfig {
 			stakers: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.1.clone(), dev_ecdsa_pubkey.clone())
