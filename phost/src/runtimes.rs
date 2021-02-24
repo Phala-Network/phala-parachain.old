@@ -75,13 +75,11 @@ impl Runtime for PhalaNodeRuntime {
 
     fn register_type_sizes(event_type_registry: &mut EventTypeRegistry<Self>) {
         event_type_registry.with_system();
-        event_type_registry.with_contracts();
         event_type_registry.with_sudo();
+        event_type_registry.with_balances();
 
         event_type_registry.with_phala_module();
-        event_type_registry.with_balances();
-        event_type_registry.with_staking();
-        event_type_registry.with_session();
+
         register_default_type_sizes(event_type_registry);
     }
 }
