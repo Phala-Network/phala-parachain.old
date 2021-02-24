@@ -32,18 +32,6 @@ use subxt::{
         Balances,
         BalancesEventTypeRegistry,
     },
-    contracts::{
-        Contracts,
-        ContractsEventTypeRegistry,
-    },
-    session::{
-        Session,
-        SessionEventTypeRegistry,
-    },
-    staking::{
-        Staking,
-        StakingEventTypeRegistry,
-    },
     sudo::{
         Sudo,
         SudoEventTypeRegistry,
@@ -54,7 +42,6 @@ use subxt::{
     },
     EventTypeRegistry,
     Runtime,
-    BasicSessionKeys,
     register_default_type_sizes
 };
 
@@ -90,7 +77,7 @@ impl System for PhalaNodeRuntime {
     type Hash = sp_core::H256;
     type Hashing = BlakeTwo256;
     type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
-    type Address = sp_runtime::MultiAddress<Self::AccountId, u32>;
+    type Address = sp_runtime::MultiAddress<Self::AccountId, ()>;
     type Header = Header<Self::BlockNumber, BlakeTwo256>;
     type Extrinsic = OpaqueExtrinsic;
     type AccountData = AccountData<<Self as Balances>::Balance>;
@@ -100,16 +87,7 @@ impl Balances for PhalaNodeRuntime {
     type Balance = u128;
 }
 
-impl Contracts for PhalaNodeRuntime {}
-
-impl Staking for PhalaNodeRuntime {}
-
 impl Sudo for PhalaNodeRuntime {}
-
-impl Session for PhalaNodeRuntime {
-    type ValidatorId = <Self as System>::AccountId;
-    type Keys = BasicSessionKeys;
-}
 
 impl phala::PhalaModule for PhalaNodeRuntime {}
 
