@@ -42,7 +42,6 @@ pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
-pallet-tips = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-bounties = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-lottery = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-vesting = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
