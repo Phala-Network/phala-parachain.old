@@ -44,7 +44,7 @@ ws = ["async-tls", "bytes", "soketto", "url", "webpki"]
 
 [dev-dependencies]
 async-std = "1.2.0"
-env_logger = "0.7.1"
+env_logger = "0.8.2"
 rand = "0.7"
 serde = { version = "1.0.40", features = ["derive"] }
 
