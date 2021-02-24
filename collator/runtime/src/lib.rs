@@ -19,8 +19,16 @@
 #![recursion_limit = "256"]
 
 // Make the WASM binary available.
-#[cfg(feature = "std")]
+#[cfg(all(feature = "std", feature = "include-wasm"))]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
+
+/// Wasm binary unwrapped. If built with `SKIP_WASM_BUILD`, the function panics.
+#[cfg(feature = "std")]
+pub fn wasm_binary_unwrap() -> &'static [u8] {
+	WASM_BINARY.expect("Development wasm binary is not available. This means the client is \
+						built with `SKIP_WASM_BUILD` flag and it is only usable for \
+						production chains. Please rebuild with the flag disabled.")
+}
 
 use codec::{Encode, Decode};
 pub use parachain_primitives::*;
@@ -59,9 +67,10 @@ use frame_system::{
 	EnsureRoot, EnsureOneOf,
 	limits::{BlockLength, BlockWeights},
 };
+pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
-#[cfg(any(feature = "std", test))]
+#[cfg(any(feature = "std", feature = "native-nostd", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{
 	Perbill, Permill, Percent, Perquintill,

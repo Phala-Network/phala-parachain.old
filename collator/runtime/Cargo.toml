@@ -70,7 +70,8 @@ xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "rococ
 substrate-wasm-builder = "4.0.0"
 
 [features]
-default = [ "std" ]
+default = ["std", "include-wasm"]
+include-wasm = []
 std = [
 	"codec/std",
 	"serde",
