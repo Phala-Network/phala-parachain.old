@@ -93,7 +93,7 @@ pub trait Config: frame_system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as PhalaModule {
+	trait Store for Module<T: Config> as PhalaModule where T::AccountId: Into<[u8; 32]> {
 		// Messaging
 		/// Number of all commands
 		CommandNumber get(fn command_number): Option<u64>;
@@ -265,7 +265,7 @@ decl_event!(
 
 // Errors inform users that something went wrong.
 decl_error! {
-	pub enum Error for Module<T: Config> {
+	pub enum Error for Module<T: Config> where T::AccountId: Into<[u8; 32]> {
 		InvalidIASSigningCert,
 		InvalidIASReportSignature,
 		InvalidQuoteStatus,
@@ -338,7 +338,7 @@ decl_error! {
 // These functions materialize as "extrinsics", which are often compared to transactions.
 // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: T::Origin {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin, T::AccountId: Into<[u8; 32]> {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
@@ -629,7 +629,7 @@ decl_module! {
 			ensure!(ContractKey::contains_key(CONTRACT_ID), Error::<T>::InvalidContract);
 			let pubkey = ContractKey::get(CONTRACT_ID);
 			// Validate TEE signature
-			//Self::verify_signature(&pubkey, &transfer_data)?;
+			Self::verify_signature(&pubkey, &transfer_data)?;
 			// Announce the successful execution
 			IngressSequence::insert(CONTRACT_ID, sequence + 1);
 			Self::deposit_event(RawEvent::TransferTokenToChain(transfer_data.data.dest, transfer_data.data.token_id, transfer_data.data.amount, sequence + 1));
@@ -654,9 +654,9 @@ decl_module! {
 
 			// build crosschain transfer XCM message
 			let xcm = Self::build_xtoken_transfering_xcm(
-				transfer_data.data.x_currency_id,
+				transfer_data.data.x_currency_id.clone(),
 				transfer_data.data.para_id,
-				transfer_data.data.dest,
+				transfer_data.data.dest.clone(),
 				transfer_data.data.dest_network,
 				transfer_data.data.amount
 			).unwrap();
@@ -849,7 +849,7 @@ decl_module! {
 	}
 }
 
-impl<T: Config> Module<T> {
+impl<T: Config> Module<T> where T::AccountId: Into<[u8; 32]> {
 	pub fn account_id() -> T::AccountId {
 		PALLET_ID.into_account()
 	}
@@ -1454,7 +1454,7 @@ impl<T: Config> Module<T> {
 				Some(Xcm::WithdrawAsset {
 					assets: vec![MultiAsset::ConcreteFungible {
 						id: currency_id.into(),
-						amount: amount.into(),
+						amount: amount.saturated_into(),
 					}],
 					effects: vec![Order::InitiateReserveWithdraw {
 						assets: vec![MultiAsset::All],
