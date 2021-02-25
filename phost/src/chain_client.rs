@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use codec::FullCodec;
-use sp_core::{storage::StorageKey, twox_128};
+use sp_core::{storage::StorageKey, twox_128, twox_64};
 use phala_types::pruntime::{
     StorageKV, RawStorageKey, StorageProof,
     OnlineWorkerSnapshot,
@@ -173,6 +173,22 @@ pub fn storage_value_key_vec(module: &str, storage_key_name: &str) -> Vec<u8> {
     let mut key = twox_128(module.as_bytes()).to_vec();
     key.extend(&twox_128(storage_key_name.as_bytes()));
     key
+}
+
+fn storage_map_key_vec(module: &str, storage_item: &str, storage_item_key: &str) -> Vec<u8> {
+	let mut key = storage_value_key_vec(module, storage_item);
+	let item_key = hex::decode(storage_item_key).unwrap();
+	let hash = twox_64(&item_key);
+	key.extend(&hash);
+	key.extend(&item_key);
+	key
+}
+
+pub async fn get_parachain_heads(client: &XtClient, paraclient: &XtClient, hash: Option<Hash>) -> Option<Vec<u8>> {
+	let para_key = storage_value_key_vec("ParachainInfo", "ParachainId");
+	let para_id = get_storage(&paraclient, None, StorageKey(para_key)).await.unwrap().unwrap();
+	let key = storage_map_key_vec("Paras", "Heads", &hex::encode(para_id));
+	get_storage(&client, hash, StorageKey(key)).await.unwrap()
 }
 
 /// Extract the last 256 bits as the AccountId (unsafe)

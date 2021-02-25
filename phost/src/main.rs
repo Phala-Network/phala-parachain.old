@@ -7,7 +7,7 @@ use sp_rpc::number::NumberOrHex;
 use codec::{Encode, Decode};
 use core::marker::PhantomData;
 use sp_finality_grandpa::{AuthorityList, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY, SetId};
-use sp_core::{storage::StorageKey, sr25519, crypto::Pair};
+use sp_core::{storage::StorageKey, sr25519, crypto::Pair, H256};
 use subxt::{EventsDecoder, Signer, system::AccountStoreExt};
 
 mod error;
@@ -78,6 +78,11 @@ struct Args {
     help = "Substrate rpc websocket endpoint")]
     substrate_ws_endpoint: String,
 
+	#[structopt(
+	default_value = "ws://localhost:9977", long,
+	help = "Parachain collator rpc websocket endpoint")]
+	collator_ws_endpoint: String,
+
     #[structopt(
     default_value = "http://localhost:8000", long,
     help = "pRuntime http endpoint")]
@@ -126,7 +131,7 @@ async fn get_block_at(client: &XtClient, h: Option<u32>)
 }
 
 async fn get_block_with_events(client: &XtClient, h: Option<u32>)
-                      -> Result<BlockWithEvents, Error> {
+    -> Result<BlockWithEvents, Error> {
     let block = get_block_at(&client, h).await?;
     let hash = block.block.header.hash();
 
@@ -142,6 +147,25 @@ async fn get_block_with_events(client: &XtClient, h: Option<u32>)
     }
 
     return Err(Error::EventNotFound);
+}
+
+async fn get_block_header_with_events(client: &XtClient, h: Option<u32>)
+									  -> Result<BlockHeaderWithEvents, Error> {
+	let pos = h.map(|h| subxt::BlockNumber::from(NumberOrHex::Number(h.into())));
+	let hash = match pos {
+		Some(_) => client.block_hash(pos).await?.ok_or(Error::BlockHashNotFound)?,
+		None => client.finalized_head().await?
+	};
+	let header = client.header(Some(hash)).await?.unwrap();
+
+	let events_with_proof = chain_client::fetch_events(&client, &hash).await?;
+	if let Some((raw_events, proof, key)) = events_with_proof {
+		println!("          ... with events {} bytes", raw_events.len());
+		let (events, proof, _key) = (Some(raw_events), Some(proof), Some(key));
+		return Ok(BlockHeaderWithEvents { block_header: header, events, proof, worker_snapshot: None });
+	}
+
+	return Err(Error::EventNotFound);
 }
 
 async fn get_authority_with_proof_at(client: &XtClient, hash: Hash) -> Result<AuthoritySetChange, Error> {
@@ -307,16 +331,16 @@ async fn sync_events_only(
 
 async fn batch_sync_block(
     client: &XtClient,
+	paraclient: &XtClient,
     pr: &PrClient,
     events_decoder: &EventsDecoder<Runtime>,
     sync_state: &mut BlockSyncState,
-    batch_window: usize
+    batch_window: usize,
+	blocknumber: BlockNumber
 ) -> Result<usize, Error> {
     let block_buf = &mut sync_state.blocks;
-    if block_buf.is_empty() {
-        return Ok(0);
-    }
 
+	let mut blocknum = blocknumber;
     let mut synced_blocks: usize = 0;
     while !block_buf.is_empty() {
         // Current authority set id
@@ -404,29 +428,45 @@ async fn batch_sync_block(
         let r = req_sync_header(pr, &header_batch, authrotiy_change.as_ref()).await?;
         println!("  ..sync_header: {:?}", r);
 
-        let dispatch_window = batch_window - 1;
-        while !block_batch.is_empty() {
-            // TODO: fix the potential overflow here
-            let end_batch = block_batch.len() as isize - 1;
-            let batch_end = cmp::min(dispatch_window as isize, end_batch);
-            if batch_end >= 0 {
-                let mut dispatch_batch: Vec<BlockHeaderWithEvents> = block_batch
-                    .drain(..=(batch_end as usize))
-                    .map(|bwe| BlockHeaderWithEvents {
-                        block_header: bwe.block.block.header,
-                        events: bwe.events,
-                        proof: bwe.proof,
-                        worker_snapshot: None,
-                    })
-                    .collect();
-                maybe_take_worker_snapshot(client, events_decoder, &mut dispatch_batch).await?;
-                let r = req_dispatch_block(pr, &dispatch_batch).await?;
-                println!("  ..dispatch_block: {:?}", r);
+        let para_fin_header = chain_client::get_parachain_heads(&client, &paraclient, Some(last_header_hash)).await;
+		if para_fin_header.is_some() {
+			let para_fin_hash = &para_fin_header.unwrap()[2..34];
+			let para_fin_block = paraclient.block(Some(H256::from_slice(para_fin_hash))).await?;
+			if para_fin_block.is_some() {
+				let para_fin_block_number = para_fin_block.unwrap().block.header.number;
+				let mut para_blocks = Vec::new();
+				for b in blocknum..=para_fin_block_number {
+					let block = get_block_header_with_events(&paraclient, Some(b)).await?;
+					para_blocks.push(block.clone());
+				}
 
-                // Update sync state
-                synced_blocks += dispatch_batch.len();
-            }
-        }
+				let dispatch_window = batch_window - 1;
+				while !para_blocks.is_empty() {
+					// TODO: fix the potential overflow here
+					let end_batch = para_blocks.len() as isize - 1;
+					let batch_end = std::cmp::min(dispatch_window as isize, end_batch);
+					if batch_end >= 0 {
+						println!("drain:{:}",batch_end);
+						let mut dispatch_batch: Vec<BlockHeaderWithEvents> = para_blocks
+							.drain(..=(batch_end as usize))
+							.collect();
+						println!("drain end");
+						maybe_take_worker_snapshot(paraclient, events_decoder, &mut dispatch_batch).await?;
+						let r = req_dispatch_block(pr, &dispatch_batch).await?;
+						println!("  ..dispatch_block: {:?}", r);
+
+						// Update sync state
+						synced_blocks += dispatch_batch.len();
+					}
+				}
+				blocknum = para_fin_block_number + 1;
+			} else {
+				println!("not found block {:?} on parachain.", hex::encode(para_fin_hash));
+			}
+		} else {
+			println!("not found parachain head on relay chain");
+		}
+
         sync_state.authory_set_state = Some(match set_id_change_at {
             // set_id changed at next block
             Some(change_at) => (change_at + 1, last_set.1 + 1),
@@ -556,8 +596,14 @@ async fn bridge(args: Args) -> Result<(), Error> {
         .skip_type_sizes_check()
         .set_url(args.substrate_ws_endpoint.clone())
         .build().await?;
-    let events_decoder = client.events_decoder();
-    println!("Connected to substrate at: {}", args.substrate_ws_endpoint.clone());
+	println!("Connected to substrate at: {}", args.substrate_ws_endpoint.clone());
+
+	let paraclient = subxt::ClientBuilder::<Runtime>::new()
+		.skip_type_sizes_check()
+		.set_url(args.collator_ws_endpoint.clone())
+		.build().await?;
+	let events_decoder = paraclient.events_decoder();
+	println!("Connected to parachain collator at: {}", args.collator_ws_endpoint.clone());
 
     // Other initialization
     let pr = PrClient::new(&args.pruntime_endpoint);
@@ -567,7 +613,7 @@ async fn bridge(args: Args) -> Result<(), Error> {
 
     // Check controller stash setup and fail early
     let controller = signer.account_id().clone();
-    let stash = get_stash_account(&client, controller.clone()).await?;
+    let stash = get_stash_account(&paraclient, controller.clone()).await?;
     if (!args.no_init && args.ra) || !args.no_write_back {
         if stash == Default::default() {
             panic!("Controller not registered; qed");
@@ -580,7 +626,7 @@ async fn bridge(args: Args) -> Result<(), Error> {
     let mut initial_sync_finished = false;
     // We will not sync message until the inclusion block after we call `ResetWorker`
     let wait_block_until = if args.reset_egress {
-        Some(reset_worker(&client, &mut signer).await?)
+        Some(reset_worker(&paraclient, &mut signer).await?)
     } else {
         None
     };
@@ -606,7 +652,7 @@ async fn bridge(args: Args) -> Result<(), Error> {
             }).await.ok();
         } else {
             println!("pRuntime already initialized. Fetching runtime info...");
-            let machine_owner = get_machine_owner(&client, info.machine_id).await?;
+            let machine_owner = get_machine_owner(&paraclient, info.machine_id).await?;
             if machine_owner == [0u8; 32] {
                 // Worker not registered
                 runtime_info = Some(
@@ -628,7 +674,7 @@ async fn bridge(args: Args) -> Result<(), Error> {
         println!("runtime_info:{:?}", runtime_info);
         if let Some(runtime_info) = runtime_info {
             if let Some(attestation) = runtime_info.attestation {
-                register_worker(&client, runtime_info.encoded_runtime_info.clone(),
+                register_worker(&paraclient, runtime_info.encoded_runtime_info.clone(),
                                 &attestation, &mut signer).await?;
             }
         }
@@ -641,8 +687,8 @@ async fn bridge(args: Args) -> Result<(), Error> {
 
     // Don't just sync message if we want to wait for some block
     let mut defer_block = wait_block_until.is_some();
-    let mut balance_seq = get_balances_ingress_seq(&client).await?;
-    let mut system_seq = get_worker_ingress(&client, stash).await?;
+    let mut balance_seq = get_balances_ingress_seq(&paraclient).await?;
+    let mut system_seq = get_worker_ingress(&paraclient, stash).await?;
     let mut sync_state = BlockSyncState {
         blocks: Vec::new(),
         authory_set_state: None
@@ -678,7 +724,7 @@ async fn bridge(args: Args) -> Result<(), Error> {
         // fill the sync buffer to catch up the chain tip
         let next_block = match sync_state.blocks.last() {
             Some(b) => b.block.block.header.number + 1,
-            None => info.blocknum
+            None => info.headernum
         };
         let batch_end =
             std::cmp::min(latest_block.header.number, next_block + args.fetch_blocks - 1);
@@ -699,7 +745,7 @@ async fn bridge(args: Args) -> Result<(), Error> {
         // if the header syncs faster than the event, let the events to catch up
         if info.headernum > info.blocknum {
             sync_events_only(
-                &client, &pr, events_decoder, &mut sync_state,
+                &paraclient, &pr, events_decoder, &mut sync_state,
                 // info.headernum is the next unknown header. So we sync to headernum - 1
                 info.headernum - 1,
                 args.sync_blocks
@@ -708,7 +754,7 @@ async fn bridge(args: Args) -> Result<(), Error> {
 
         // send the blocks to pRuntime in batch
         let synced_blocks = batch_sync_block(
-            &client, &pr, events_decoder, &mut sync_state, args.sync_blocks).await?;
+            &client, &paraclient, &pr, events_decoder, &mut sync_state, args.sync_blocks, info.blocknum).await?;
 
         // check if pRuntime has already reached the chain tip.
         if !defer_block && synced_blocks == 0 {
@@ -724,7 +770,7 @@ async fn bridge(args: Args) -> Result<(), Error> {
 
             // Now we are idle. Let's try to sync the egress messages.
             if !args.no_write_back {
-                let mut msg_sync = msg_sync::MsgSync::new(&client, &pr, &mut signer);
+                let mut msg_sync = msg_sync::MsgSync::new(&paraclient, &pr, &mut signer);
                 msg_sync.maybe_sync_worker_egress(&mut system_seq).await?;
                 msg_sync.maybe_sync_balances_egress(&mut balance_seq).await?;
             }

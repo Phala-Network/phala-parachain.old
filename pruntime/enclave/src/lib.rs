@@ -161,7 +161,6 @@ struct LocalState {
     private_key: Box<SecretKey>,
     headernum: u32, // the height of synced block
     blocknum: u32,  // the height of dispatched block
-    block_hashes: Vec<Hash>,
     ecdh_private_key: Option<EcdhKey>,
     ecdh_public_key: Option<ring::agreement::PublicKey>,
     machine_id: [u8; 16],
@@ -220,7 +219,6 @@ lazy_static! {
                 private_key: Box::new(sk),
                 headernum: 0,
                 blocknum: 0,
-                block_hashes: Vec::new(),
                 ecdh_private_key: None,
                 ecdh_public_key: None,
                 machine_id: [0; 16],
@@ -990,7 +988,10 @@ fn init_runtime(input: InitRuntimeReq) -> Result<Value, Value> {
                 println!("Error in create_attestation_report: {:?}", e);
                 return Err(json!({"message": "Error while connecting to IAS"}))
             }
-        };
+        };*/
+		let attn_report = r#"{"id":"333540349849848081544703568386483377409","timestamp":"2020-06-11T07:11:27.062437","version":3,"epidPseudonym":"TzOBDgoSXWiLfGF05YgDeSbYUXVcOxJbKpP+7mqBE8yxHqXI5SJXysKYrDm8yitkBUV5wGU8Cp1rsZyA7IY2mvJRjySQDnZjIr0XqFea7T0Hlv8XVt/SzKfZ4fAVznzLu1woS9bfdRy0C3uCEjgQwrjovBRfN8koq2LXbIcK4io=","isvEnclaveQuoteStatus":"OK","isvEnclaveQuoteBody":"AgABAIYLAAALAAoAAAAAAK0Il5ABqXyEENt8GIJhqE8AAAAAAAAAAAAAAAAAAAAAAgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAAADAAAAAAAAAA2GSYAGRFZ+7O6vYsFXyF6RaK7q4Dqu7l+PQYZRQlbLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACD1xnnferKFHD2uvYqTXdDA8iZ22kCD5xw7h38CMfOngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACe5p+jcZjpj8cIjZ4jt5CwO16YWEv9vatRY1F+xb5A231RWcXe0sZG2qOOu3RHPdcOBQqqN9RlTya8ggqJoK4E"}"#.to_string();
+		let sig = "MBF7WI5TbOP4pOkRqwxGf2zCcZ0gnZG1SMrur3Agq8LFk6b4wGnJeye9Nvoh7cjGpbpRi8UogySp8CwemndTRpvm39z1vjUKpmIW4xbsRJxGoL5T6qCgHXYvbY6lsf/x0WC8/ZxWScirAlnJtk31aMw0McRjF0jbPk1E1W3PR1PKXTntgL9N4Z6AyPmEm93M7BtLbtgxIEovZQMarEIiCXcgD1F0VzaQoY3O6QUpGtWmnP9e6iv/1tF+tFGta3CCf+yUkCEEw9FICgmo3TgQu/iHetKwOp2DcWwoajhqGbJAJg1a54bycRmjrj+E1s/yE/aucHgeP4xNHYY9F4+GGQ==".to_string();
+		let cert = "MIIEoTCCAwmgAwIBAgIJANEHdl0yo7CWMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNVBAYTAlVTMQswCQYDVQQIDAJDQTEUMBIGA1UEBwwLU2FudGEgQ2xhcmExGjAYBgNVBAoMEUludGVsIENvcnBvcmF0aW9uMTAwLgYDVQQDDCdJbnRlbCBTR1ggQXR0ZXN0YXRpb24gUmVwb3J0IFNpZ25pbmcgQ0EwHhcNMTYxMTIyMDkzNjU4WhcNMjYxMTIwMDkzNjU4WjB7MQswCQYDVQQGEwJVUzELMAkGA1UECAwCQ0ExFDASBgNVBAcMC1NhbnRhIENsYXJhMRowGAYDVQQKDBFJbnRlbCBDb3Jwb3JhdGlvbjEtMCsGA1UEAwwkSW50ZWwgU0dYIEF0dGVzdGF0aW9uIFJlcG9ydCBTaWduaW5nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqXot4OZuphR8nudFrAFiaGxxkgma/Es/BA+tbeCTUR106AL1ENcWA4FX3K+E9BBL0/7X5rj5nIgX/R/1ubhkKWw9gfqPG3KeAtIdcv/uTO1yXv50vqaPvE1CRChvzdS/ZEBqQ5oVvLTPZ3VEicQjlytKgN9cLnxbwtuvLUK7eyRPfJW/ksddOzP8VBBniolYnRCD2jrMRZ8nBM2ZWYwnXnwYeOAHV+W9tOhAImwRwKF/95yAsVwd21ryHMJBcGH70qLagZ7Ttyt++qO/6+KAXJuKwZqjRlEtSEz8gZQeFfVYgcwSfo96oSMAzVr7V0L6HSDLRnpb6xxmbPdqNol4tQIDAQABo4GkMIGhMB8GA1UdIwQYMBaAFHhDe3amfrzQr35CN+s1fDuHAVE8MA4GA1UdDwEB/wQEAwIGwDAMBgNVHRMBAf8EAjAAMGAGA1UdHwRZMFcwVaBToFGGT2h0dHA6Ly90cnVzdGVkc2VydmljZXMuaW50ZWwuY29tL2NvbnRlbnQvQ1JML1NHWC9BdHRlc3RhdGlvblJlcG9ydFNpZ25pbmdDQS5jcmwwDQYJKoZIhvcNAQELBQADggGBAGcIthtcK9IVRz4rRq+ZKE+7k50/OxUsmW8aavOzKb0iCx07YQ9rzi5nU73tME2yGRLzhSViFs/LpFa9lpQL6JL1aQwmDR74TxYGBAIi5f4I5TJoCCEqRHz91kpG6Uvyn2tLmnIdJbPE4vYvWLrtXXfFBSSPD4Afn7+3/XUggAlc7oCTizOfbbtOFlYA4g5KcYgS1J2ZAeMQqbUdZseZCcaZZZn65tdqee8UXZlDvx0+NdO0LR+5pFy+juM0wWbu59MvzcmTXbjsi7HY6zd53Yq5K244fwFHRQ8eOB0IWB+4PfM7FeAApZvlfqlKOlLcZL2uyVmzRkyR5yW72uo9mehX44CiPJ2fse9Y6eQtcfEhMPkmHXI01sN+KwPbpA39+xOsStjhP9N1Y1a2tQAVo+yVgLgV2Hws73Fc0o3wC78qPEA+v2aRs/Be3ZFDgDyghc/1fgU+7C+P6kbqd4poyb6IW8KCJbxfMJvkordNOgOUUxndPHEi/tb/U7uLjLOgPA==".to_string();
 
         attestation = Some(InitRespAttestation {
             version: 1,
@@ -1079,15 +1080,15 @@ fn parse_block(data: &Vec<u8>) -> Result<chain::SignedBlock, parity_scale_codec:
 }
 
 fn format_address(addr: &chain::Address) -> String {
-    // match addr {
-    //     chain::Address::Id(id) => hex::encode_hex_compact(id.as_ref()),
-    //     chain::Address::Index(index) => format!("index:{}", index),
-    //     // TODO: Verify these
-    //     chain::Address::Raw(address) => hex::encode_hex_compact(address.as_ref()),
-    //     chain::Address::Address32(address) => hex::encode_hex_compact(address.as_ref()),
-    //     chain::Address::Address20(address) => hex::encode_hex_compact(address.as_ref())
-    // }
-    hex::encode_hex_compact(addr.as_ref())
+     match addr {
+         chain::Address::Id(id) => hex::encode_hex_compact(id.as_ref()),
+         chain::Address::Index(index) => format!("index:{:?}", index),
+         // TODO: Verify these
+         chain::Address::Raw(address) => hex::encode_hex_compact(address.as_ref()),
+         chain::Address::Address32(address) => hex::encode_hex_compact(address.as_ref()),
+         chain::Address::Address20(address) => hex::encode_hex_compact(address.as_ref())
+    }
+    //hex::encode_hex_compact(addr.as_ref())
 }
 
 fn handle_execution(
@@ -1226,11 +1227,6 @@ fn sync_header(input: SyncHeaderReq) -> Result<Value, Value> {
         local_state.headernum = last_header + 1;
     }
 
-    // Save the block hashes for future dispatch
-    for header in headers.iter() {
-        local_state.block_hashes.push(header.header.hash());
-    }
-
     Ok(json!({
         "synced_to": last_header
     }))
@@ -1261,26 +1257,24 @@ fn dispatch_block(input: DispatchBlockReq) -> Result<Value, Value> {
     if last_block.block_header.number >= local_state.headernum {
         return Err(error_msg("Unsynced block"))
     }
-    for (i, block) in blocks.iter().enumerate() {
-        let expected_hash = &local_state.block_hashes[i];
-        if block.block_header.hash() != *expected_hash {
-            return Err(error_msg("Unexpected block hash"))
-        }
-        // TODO: examine extrinsic merkle tree
-    }
 
     let ecdh_privkey = ecdh::clone_key(
         local_state.ecdh_private_key.as_ref().expect("ECDH not initizlied"));
     let mut last_block = 0;
+	let mut current_bn = first_block.block_header.number - 1;
     for block in blocks.iter() {
+		current_bn = current_bn + 1;
+		if current_bn != block.block_header.number {
+			return Err(error_msg("Unexpected block"));
+		}
+
         if block.events.is_none() {
-            return Err(error_msg("Event was required"))
+            return Err(error_msg("Event was required"));
         }
 
         handle_events(&block, &ecdh_privkey, local_state.dev_mode)?;
 
         last_block = block.block_header.number;
-        local_state.block_hashes.remove(0);
         local_state.blocknum = last_block + 1;
     }
 
