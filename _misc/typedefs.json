@@ -56,8 +56,8 @@
   },
   "PayoutReason": {
     "_enum": {
-	  "OnlineReward": null,
-	  "ComputeReward": null
-	}
+      "OnlineReward": null,
+      "ComputeReward": null
+    }
   }
 }
