@@ -71,6 +71,8 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1
 
 fixed = { git = "https://github.com/encointer/substrate-fixed", package = "substrate-fixed", default-features = false }
 
+xcm-transactor = { path = "../../collator/pallets/xcm-transactor", default-features = false }
+
 [features]
 default = [
   "sp-runtime-interface/disable_target_static_assertions",

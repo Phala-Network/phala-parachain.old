@@ -33,6 +33,9 @@ type XtClient = subxt::Client<Runtime>;
 type PrClient = pruntime_client::PRuntimeClient;
 type SrSigner = subxt::PairSigner<Runtime, sr25519::Pair>;
 
+pub const BALANCES: u32 = 2;
+pub const ASSETS: u32 = 3;
+
 #[derive(Debug, StructOpt)]
 #[structopt(name = "phost")]
 struct Args {
@@ -484,7 +487,11 @@ async fn get_stash_account(client: &XtClient, controller: AccountId)
 }
 
 async fn get_balances_ingress_seq(client: &XtClient) -> Result<u64, Error> {
-    client.fetch_or_default(&runtimes::phala::IngressSequenceStore::new(2), None).await.or(Ok(0))
+    client.fetch_or_default(&runtimes::phala::IngressSequenceStore::new(BALANCES), None).await.or(Ok(0))
+}
+
+async fn get_assets_ingress_seq(client: &XtClient) -> Result<u64, Error> {
+	client.fetch_or_default(&runtimes::phala::IngressSequenceStore::new(ASSETS), None).await.or(Ok(0))
 }
 
 async fn get_worker_ingress(client: &XtClient, stash: AccountId) -> Result<u64, Error> {
@@ -688,6 +695,7 @@ async fn bridge(args: Args) -> Result<(), Error> {
     // Don't just sync message if we want to wait for some block
     let mut defer_block = wait_block_until.is_some();
     let mut balance_seq = get_balances_ingress_seq(&paraclient).await?;
+	let mut asset_seq = get_assets_ingress_seq(&paraclient).await?;
     let mut system_seq = get_worker_ingress(&paraclient, stash).await?;
     let mut sync_state = BlockSyncState {
         blocks: Vec::new(),
@@ -772,7 +780,8 @@ async fn bridge(args: Args) -> Result<(), Error> {
             if !args.no_write_back {
                 let mut msg_sync = msg_sync::MsgSync::new(&paraclient, &pr, &mut signer);
                 msg_sync.maybe_sync_worker_egress(&mut system_seq).await?;
-                msg_sync.maybe_sync_balances_egress(&mut balance_seq).await?;
+                msg_sync.maybe_sync_balances_egress(&mut balance_seq, BALANCES).await?;
+				msg_sync.maybe_sync_balances_egress(&mut balance_seq, ASSETS).await?;
             }
         }
         if synced_blocks == 0 {

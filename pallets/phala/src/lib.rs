@@ -32,7 +32,7 @@ extern crate phala_types as types;
 use types::{
 	BlockRewardInfo, MinerStatsDelta, PRuntimeInfo, PayoutPrefs, PayoutReason, RoundInfo,
 	RoundStats, Score, SignedDataType, SignedWorkerMessage, StashInfo, TransferData, WorkerInfo,
-	WorkerMessagePayload, WorkerStateEnum, TransferXTokenData, ChainId, XCurrencyId,
+	WorkerMessagePayload, WorkerStateEnum, TransferTokenData, TransferXTokenData, ChainId, XCurrencyId,
 };
 use cumulus_primitives_core::ParaId;
 use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm};
@@ -237,6 +237,8 @@ decl_event!(
 		CommandPushed(AccountId, u32, Vec<u8>, u64),
 		TransferToTee(AccountId, Balance),
 		TransferToChain(AccountId, Balance, u64),
+		TransferTokenToTee(AccountId, Vec<u8>, Balance),
+		TransferTokenToChain(AccountId, Vec<u8>, Balance, u64),
 		TransferXTokenToChain(AccountId, Vec<u8>, Balance, u64),
 		XcmExecutorFailed(AccountId, Vec<u8>, Balance, u64),
 		WorkerRegistered(AccountId, Vec<u8>, Vec<u8>), // stash, identity_key, machine_id
@@ -604,6 +606,33 @@ decl_module! {
 			// Announce the successful execution
 			IngressSequence::insert(CONTRACT_ID, sequence + 1);
 			Self::deposit_event(RawEvent::TransferToChain(transfer_data.data.dest, transfer_data.data.amount, sequence + 1));
+			Ok(())
+		}
+
+		#[weight = 0]
+		fn transfer_token_to_tee(origin, token_id: Vec<u8>, #[compact] amount: BalanceOf<T>) -> dispatch::DispatchResult {
+			let who = ensure_signed(origin)?;
+			Self::deposit_event(RawEvent::TransferTokenToTee(who, token_id, amount));
+			Ok(())
+		}
+
+		#[weight = 0]
+		fn transfer_token_to_chain(origin, data: Vec<u8>) -> dispatch::DispatchResult {
+			const CONTRACT_ID: u32 = 3;
+			ensure_signed(origin)?;
+			let transfer_data: TransferTokenData<<T as frame_system::Config>::AccountId, BalanceOf<T>>
+				= Decode::decode(&mut &data[..]).map_err(|_| Error::<T>::InvalidInput)?;
+			// Check sequence
+			let sequence = IngressSequence::get(CONTRACT_ID);
+			ensure!(transfer_data.data.sequence == sequence + 1, Error::<T>::BadMessageSequence);
+			// Contract key
+			ensure!(ContractKey::contains_key(CONTRACT_ID), Error::<T>::InvalidContract);
+			let pubkey = ContractKey::get(CONTRACT_ID);
+			// Validate TEE signature
+			//Self::verify_signature(&pubkey, &transfer_data)?;
+			// Announce the successful execution
+			IngressSequence::insert(CONTRACT_ID, sequence + 1);
+			Self::deposit_event(RawEvent::TransferTokenToChain(transfer_data.data.dest, transfer_data.data.token_id, transfer_data.data.amount, sequence + 1));
 			Ok(())
 		}
 
