@@ -32,18 +32,6 @@ use subxt::{
         Balances,
         BalancesEventTypeRegistry,
     },
-    contracts::{
-        Contracts,
-        ContractsEventTypeRegistry,
-    },
-    session::{
-        Session,
-        SessionEventTypeRegistry,
-    },
-    staking::{
-        Staking,
-        StakingEventTypeRegistry,
-    },
     sudo::{
         Sudo,
         SudoEventTypeRegistry,
@@ -181,6 +169,24 @@ pub mod phala {
         /// The transfer transaction data, SCALE encoded
         pub data: Vec<u8>,
     }
+
+	/// The call to transfer_token_to_chain
+	#[derive(Clone, Debug, PartialEq, Call, Encode)]
+	pub struct TransferTokenToChainCall<T: PhalaModule> {
+		/// Runtime marker
+		pub _runtime: PhantomData<T>,
+		/// The transfer transaction data, SCALA encoded
+		pub data: Vec<u8>,
+	}
+
+	/// The call to transfer_token_to_chain
+	#[derive(Clone, Debug, PartialEq, Call, Encode)]
+	pub struct TransferXTokenToChainCall<T: PhalaModule> {
+		/// Runtime marker
+		pub _runtime: PhantomData<T>,
+		/// The transfer transaction data, SCALA encoded
+		pub data: Vec<u8>,
+	}
 
     /// The call to register_worker
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
