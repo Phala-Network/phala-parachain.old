@@ -136,6 +136,13 @@ pub fn check_round_end_event(
     Ok(false)
 }
 
+pub async fn get_parachain_heads(client: &XtClient, paraclient: &XtClient, hash: Option<Hash>) -> Option<Vec<u8>> {
+	let para_key = storage_value_key_vec("ParachainInfo", "ParachainId");
+	let para_id = get_storage(&paraclient, None, StorageKey(para_key)).await.unwrap().unwrap();
+	let key = storage_map_key_vec("Paras", "Heads", &hex::encode(para_id));
+	get_storage(&client, hash, StorageKey(key)).await.unwrap()
+}
+
 // Storage functions
 
 /// Fetches all the StorageMap entries from Substrate
@@ -175,6 +182,7 @@ pub fn storage_value_key_vec(module: &str, storage_key_name: &str) -> Vec<u8> {
     key
 }
 
+/// Calculates the Substrate storage key prefix for a StorageMap
 fn storage_map_key_vec(module: &str, storage_item: &str, storage_item_key: &str) -> Vec<u8> {
 	let mut key = storage_value_key_vec(module, storage_item);
 	let item_key = hex::decode(storage_item_key).unwrap();
@@ -182,13 +190,6 @@ fn storage_map_key_vec(module: &str, storage_item: &str, storage_item_key: &str)
 	key.extend(&hash);
 	key.extend(&item_key);
 	key
-}
-
-pub async fn get_parachain_heads(client: &XtClient, paraclient: &XtClient, hash: Option<Hash>) -> Option<Vec<u8>> {
-	let para_key = storage_value_key_vec("ParachainInfo", "ParachainId");
-	let para_id = get_storage(&paraclient, None, StorageKey(para_key)).await.unwrap().unwrap();
-	let key = storage_map_key_vec("Paras", "Heads", &hex::encode(para_id));
-	get_storage(&client, hash, StorageKey(key)).await.unwrap()
 }
 
 /// Extract the last 256 bits as the AccountId (unsafe)
