@@ -21,12 +21,23 @@ use sp_runtime::{
 };
 
 use subxt::{
-    balances::{AccountData, Balances, BalancesEventTypeRegistry},
     extrinsic::DefaultExtra,
-    register_default_type_sizes,
-    sudo::{Sudo, SudoEventTypeRegistry},
-    system::{System, SystemEventTypeRegistry},
-    BasicSessionKeys, EventTypeRegistry, Runtime,
+    balances::{
+        AccountData,
+        Balances,
+        BalancesEventTypeRegistry,
+    },
+    sudo::{
+        Sudo,
+        SudoEventTypeRegistry,
+    },
+    system::{
+        System,
+        SystemEventTypeRegistry,
+    },
+    EventTypeRegistry,
+    Runtime,
+    register_default_type_sizes
 };
 
 use self::phala::PhalaModuleEventTypeRegistry;
@@ -47,9 +58,10 @@ impl Runtime for PhalaNodeRuntime {
     fn register_type_sizes(event_type_registry: &mut EventTypeRegistry<Self>) {
         event_type_registry.with_system();
         event_type_registry.with_sudo();
+        event_type_registry.with_balances();
 
         event_type_registry.with_phala_module();
-        event_type_registry.with_balances();
+
         register_default_type_sizes(event_type_registry);
     }
 }

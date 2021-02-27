@@ -6,17 +6,17 @@
 			{
 				"name": "alice",
 				"wsPort": 9944,
-				"port": 30444
+				"port": 30333
 			},
 			{
 				"name": "bob",
-				"wsPort": 9955,
-				"port": 30555
+				"wsPort": 9244,
+				"port": 32333
 			},
 			{
 				"name": "charlie",
-				"wsPort": 9966,
-				"port": 30666
+				"wsPort": 9344,
+				"port": 33333
 			}
 		]
 	},
@@ -25,23 +25,28 @@
 			"bin": "./bin/phala-collator",
 			"chain": "local",
 			"id": "2000",
-			"wsPort": 9977,
-			"port": 31200,
+			"wsPort": 9444,
+			"port": 34333,
 			"balance": "1000000000000000000000",
-			"flags": ["--", "--execution=wasm", "-lruntime=debug", "RUST_BACKTRACE=verbose"]
+			"flags": [
+				"--",
+				"--execution=wasm", "-lruntime=debug", "RUST_BACKTRACE=verbose"
+			]
 		},
 		{
 			"bin": "./bin/phala-collator",
 			"chain": "local",
 			"id": "5000",
-			"wsPort": 9988,
-			"port": 31300,
+			"wsPort": 9544,
+			"port": 35333,
 			"balance": "1000000000000000000000",
-			"flags": ["--", "--execution=wasm", "-lruntime=debug", "RUST_BACKTRACE=verbose"]
+			"flags": [
+				"--",
+				"--execution=wasm", "-lruntime=debug", "RUST_BACKTRACE=verbose"
+			]
 		}
 	],
-	"simpleParachains": [
-	],
+	"simpleParachains": [],
 	"hrmpChannels": [
 		{
 			"sender": "2000",
@@ -56,6 +61,5 @@
 			"maxMessageSize": 512
 		}
 	],
-	"types": {
-	}
+	"types": {}
 }

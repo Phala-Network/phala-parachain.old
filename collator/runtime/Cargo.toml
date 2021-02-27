@@ -27,14 +27,28 @@ sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "roco
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 frame-executive = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-transaction-payment = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-transaction-payment-rpc-runtime-api = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 
+pallet-utility = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-multisig = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-proxy = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-scheduler = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-collective = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-treasury = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-bounties = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-lottery = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-vesting = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-recovery = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-democracy = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+
 pallet-phala = { path = "../../pallets/phala", package = "pallet-phala", default-features = false }
 pallet-claim = { path = "../../pallets/claim", package = "pallet-claim", default-features = false }
 pallet-mining-staking = { path = "../../pallets/mining_staking", package = "pallet-mining-staking", default-features = false }
@@ -58,7 +72,8 @@ xcm-transactor = { path = "../pallets/xcm-transactor", default-features = false 
 substrate-wasm-builder = "4.0.0"
 
 [features]
-default = [ "std" ]
+default = ["std", "include-wasm"]
+include-wasm = []
 std = [
 	"codec/std",
 	"serde",
@@ -80,7 +95,12 @@ std = [
 	"pallet-randomness-collective-flip/std",
 	"pallet-timestamp/std",
 	"pallet-sudo/std",
+	"pallet-utility/std",
+	"pallet-multisig/std",
+	"pallet-proxy/std",
+	"pallet-scheduler/std",
 	"pallet-transaction-payment/std",
+	"pallet-transaction-payment-rpc-runtime-api/std",
 	"parachain-info/std",
 	"parachain-primitives/std",
 	"cumulus-pallet-parachain-system/std",
@@ -92,6 +112,13 @@ std = [
 	"xcm-transactor/std",
 	"pallet-collective/std",
 	"pallet-treasury/std",
+	"pallet-lottery/std",
+	"pallet-membership/std",
+	"pallet-recovery/std",
+	"pallet-bounties/std",
+	"pallet-democracy/std",
+	"pallet-identity/std",
+	"pallet-vesting/std",
 	"pallet-phala/std",
 	"pallet-claim/std",
 	"pallet-mining-staking/std"
