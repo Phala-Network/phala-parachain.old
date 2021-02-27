@@ -747,7 +747,6 @@ construct_runtime! {
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system::{Module, Call, Storage, Config, Event<T>},
-		Utility: pallet_utility::{Module, Call, Event},
 		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
 		Sudo: pallet_sudo::{Module, Call, Storage, Config<T>, Event<T>},
@@ -758,6 +757,10 @@ construct_runtime! {
 		XcmHandler: cumulus_pallet_xcm_handler::{Module, Call, Event<T>, Origin},
 		Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
+		PhalaModule: pallet_phala::{Module, Call, Config<T>, Storage, Event<T>},
+		PhaClaim: pallet_claim::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		MiningStaking: pallet_mining_staking::{Module, Call, Storage, Event<T>},
+		Utility: pallet_utility::{Module, Call, Event},
 		Identity: pallet_identity::{Module, Call, Storage, Event<T>},
 		Recovery: pallet_recovery::{Module, Call, Storage, Event<T>},
         Vesting: pallet_vesting::{Module, Call, Storage, Event<T>, Config<T>},
@@ -769,9 +772,6 @@ construct_runtime! {
 		Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
 		TechnicalCommittee: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		TechnicalMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-		PhalaModule: pallet_phala::{Module, Call, Config<T>, Storage, Event<T>},
-		PhaClaim: pallet_claim::{Module, Call, Storage, Event<T>, ValidateUnsigned},
-		MiningStaking: pallet_mining_staking::{Module, Call, Storage, Event<T>},
 	}
 }
 
