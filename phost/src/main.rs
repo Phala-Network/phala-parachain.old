@@ -339,7 +339,8 @@ async fn batch_sync_block(
     events_decoder: &EventsDecoder<Runtime>,
     sync_state: &mut BlockSyncState,
     batch_window: usize,
-	blocknumber: BlockNumber
+	blocknumber: BlockNumber,
+	paraid_storage_key: StorageKey
 ) -> Result<usize, Error> {
     let block_buf = &mut sync_state.blocks;
 
@@ -431,7 +432,8 @@ async fn batch_sync_block(
         let r = req_sync_header(pr, &header_batch, authrotiy_change.as_ref()).await?;
         println!("  ..sync_header: {:?}", r);
 
-        let para_fin_header = chain_client::get_parachain_heads(&client, &paraclient, Some(last_header_hash)).await;
+        let para_fin_header = chain_client::get_parachain_heads(&client,
+			Some(last_header_hash), paraid_storage_key.clone()).await;
 		if para_fin_header.is_some() {
 			let para_fin_hash = &para_fin_header.unwrap()[2..34];
 			let para_fin_block = paraclient.block(Some(H256::from_slice(para_fin_hash))).await?;
@@ -603,14 +605,15 @@ async fn bridge(args: Args) -> Result<(), Error> {
         .skip_type_sizes_check()
         .set_url(args.substrate_ws_endpoint.clone())
         .build().await?;
-	println!("Connected to substrate at: {}", args.substrate_ws_endpoint.clone());
+	println!("Connected to relay chain node at: {}", args.substrate_ws_endpoint.clone());
 
+	// TODO: switch to Polkadot runtime
 	let paraclient = subxt::ClientBuilder::<Runtime>::new()
 		.skip_type_sizes_check()
 		.set_url(args.collator_ws_endpoint.clone())
 		.build().await?;
 	let events_decoder = paraclient.events_decoder();
-	println!("Connected to parachain collator at: {}", args.collator_ws_endpoint.clone());
+	println!("Connected to parachain node at: {}", args.collator_ws_endpoint.clone());
 
     // Other initialization
     let pr = PrClient::new(&args.pruntime_endpoint);
@@ -702,6 +705,9 @@ async fn bridge(args: Args) -> Result<(), Error> {
         authory_set_state: None
     };
 
+	let paraid_storage_key = chain_client::get_paraid_key(&paraclient).await
+		.expect("Failed to get paraid storage key");
+
     loop {
         // update the latest pRuntime state
         info = pr.req_decode("get_info", GetInfoReq {}).await?;
@@ -762,7 +768,8 @@ async fn bridge(args: Args) -> Result<(), Error> {
 
         // send the blocks to pRuntime in batch
         let synced_blocks = batch_sync_block(
-            &client, &paraclient, &pr, events_decoder, &mut sync_state, args.sync_blocks, info.blocknum).await?;
+            &client, &paraclient, &pr, events_decoder, &mut sync_state,
+			args.sync_blocks, info.blocknum, paraid_storage_key.clone()).await?;
 
         // check if pRuntime has already reached the chain tip.
         if !defer_block && synced_blocks == 0 {
@@ -780,8 +787,8 @@ async fn bridge(args: Args) -> Result<(), Error> {
             if !args.no_write_back {
                 let mut msg_sync = msg_sync::MsgSync::new(&paraclient, &pr, &mut signer);
                 msg_sync.maybe_sync_worker_egress(&mut system_seq).await?;
-                msg_sync.maybe_sync_balances_egress(&mut balance_seq, BALANCES).await?;
-				msg_sync.maybe_sync_balances_egress(&mut balance_seq, ASSETS).await?;
+                msg_sync.maybe_sync_contract_egress(&mut balance_seq, BALANCES).await?;
+				msg_sync.maybe_sync_contract_egress(&mut asset_seq, ASSETS).await?;
             }
         }
         if synced_blocks == 0 {

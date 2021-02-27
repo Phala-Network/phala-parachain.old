@@ -136,11 +136,21 @@ pub fn check_round_end_event(
     Ok(false)
 }
 
-pub async fn get_parachain_heads(client: &XtClient, paraclient: &XtClient, hash: Option<Hash>) -> Option<Vec<u8>> {
+pub async fn get_paraid_key(paraclient: &XtClient) -> Option<StorageKey> {
 	let para_key = storage_value_key_vec("ParachainInfo", "ParachainId");
-	let para_id = get_storage(&paraclient, None, StorageKey(para_key)).await.unwrap().unwrap();
-	let key = storage_map_key_vec("Paras", "Heads", &hex::encode(para_id));
-	get_storage(&client, hash, StorageKey(key)).await.unwrap()
+	match get_storage(&paraclient, None, StorageKey(para_key)).await.unwrap() {
+		Some(para_id) => {
+			let key = storage_map_key_vec("Paras", "Heads", &hex::encode(para_id));
+			Some(StorageKey(key))
+		},
+		None => {
+			None
+		}
+	}
+}
+
+pub async fn get_parachain_heads(client: &XtClient, hash: Option<Hash>, storage_key: StorageKey) -> Option<Vec<u8>> {
+	get_storage(&client, hash, storage_key).await.unwrap()
 }
 
 // Storage functions

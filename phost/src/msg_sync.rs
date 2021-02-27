@@ -78,7 +78,7 @@ impl<'a> MsgSync<'a> {
     }
 
     /// Syncs the Balances egress messages when available
-    pub async fn maybe_sync_balances_egress(&mut self, sequence: &mut u64, contract_id: u32) -> Result<(), Error> {
+    pub async fn maybe_sync_contract_egress(&mut self, sequence: &mut u64, contract_id: u32) -> Result<(), Error> {
 		// Check pending messages in Balances' egress queue
 		let query_resp = self.pr.query(contract_id, ReqData::PendingChainTransfer { sequence: *sequence }).await?;
 		let transfer_data = match query_resp {
