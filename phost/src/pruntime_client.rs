@@ -1,25 +1,28 @@
-use serde::Serialize;
+use bytes::buf::BufExt as _;
 use hyper::Client as HttpClient;
 use hyper::{Body, Method, Request};
-use bytes::buf::BufExt as _;
+use serde::Serialize;
 
 use crate::error::Error;
 use crate::types::{
-    RuntimeReq, Resp, SignedResp, ReqData, QueryReq, QueryRespData, Query, Payload
+    Payload, Query, QueryReq, QueryRespData, ReqData, Resp, RuntimeReq, SignedResp,
 };
 
 pub struct PRuntimeClient {
-    base_url: String
+    base_url: String,
 }
 
 impl PRuntimeClient {
     pub fn new(base_url: &str) -> Self {
         PRuntimeClient {
-            base_url: base_url.to_string()
+            base_url: base_url.to_string(),
         }
     }
 
-    async fn req<T>(&self, command: &str, param: &T) -> Result<SignedResp, Error>  where T: Serialize {
+    async fn req<T>(&self, command: &str, param: &T) -> Result<SignedResp, Error>
+    where
+        T: Serialize,
+    {
         let client = HttpClient::new();
         let endpoint = format!("{}/{}", self.base_url, command);
 
@@ -44,7 +47,9 @@ impl PRuntimeClient {
     }
 
     pub async fn req_decode<Req>(&self, command: &str, request: Req) -> Result<Req::Resp, Error>
-        where Req: Serialize + Resp {
+    where
+        Req: Serialize + Resp,
+    {
         let payload = RuntimeReq::new(request);
         let resp = self.req(command, &payload).await?;
         let result: Req::Resp = serde_json::from_str(&resp.payload)?;
@@ -55,8 +60,7 @@ impl PRuntimeClient {
     ///
     /// It's possible to query with e2e encryption. However currently only Plain message is
     /// supported.
-    pub async fn query(&self, contract_id: u32, request: ReqData)
-    -> Result<QueryRespData, Error> {
+    pub async fn query(&self, contract_id: u32, request: ReqData) -> Result<QueryRespData, Error> {
         // Encode the query within Payload::Plain
         let query = Query {
             contract_id,
@@ -66,15 +70,17 @@ impl PRuntimeClient {
         let query_value = serde_json::to_value(&query)?;
         let payload = Payload::Plain(query_value.to_string());
         let query_payload = serde_json::to_string(&payload)?;
-        println!("Query contract: {}, payload: {}", contract_id, query_payload);
+        println!(
+            "Query contract: {}, payload: {}",
+            contract_id, query_payload
+        );
         // Send the query
         let resp = self.req_decode("query", QueryReq { query_payload }).await?;
         // Only accept Payload::Plain response
         let Payload::Plain(plain_json) = resp;
         println!("Query response: {:}", &plain_json);
-        let resp_data: QueryRespData = serde_json::from_str(plain_json.as_str())
-            .map_err(|_| Error::FailedToDecode)?;
-        return Ok(resp_data)
+        let resp_data: QueryRespData =
+            serde_json::from_str(plain_json.as_str()).map_err(|_| Error::FailedToDecode)?;
+        return Ok(resp_data);
     }
-
 }

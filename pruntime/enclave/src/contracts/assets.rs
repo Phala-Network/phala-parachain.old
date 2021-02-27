@@ -1,19 +1,19 @@
-use std::collections::{BTreeMap};
-use serde::{Serialize, Deserialize};
 use crate::std::string::String;
 use crate::std::string::ToString;
 use crate::std::vec::Vec;
 use core::str;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
-use crate::hex;
-use crate::contracts;
-use crate::types::TxRef;
-use crate::contracts::{AccountIdWrapper, SequenceType};
 use super::TransactionStatus;
+use crate::contracts;
+use crate::contracts::{AccountIdWrapper, SequenceType};
+use crate::hex;
+use crate::types::TxRef;
 
-use parity_scale_codec::{Encode, Decode};
-use sp_core::ecdsa;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::crypto::Pair;
+use sp_core::ecdsa;
 
 extern crate runtime as chain;
 
@@ -25,8 +25,8 @@ pub struct AssetMetadata {
     #[serde(with = "super::serde_balance")]
     total_supply: u128,
     symbol: String,
-	decimal: u8,
-	id: AssetId
+    decimal: u8,
+    id: AssetId,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AssetMetadataBalance {
@@ -35,82 +35,74 @@ pub struct AssetMetadataBalance {
     balance: chain::Balance,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(Encode, Decode)]
+#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
 pub struct TransferToken {
-	token_id: AssetId,
-	dest: AccountIdWrapper,
-	amount: chain::Balance,
-	sequence: SequenceType,
+    token_id: AssetId,
+    dest: AccountIdWrapper,
+    amount: chain::Balance,
+    sequence: SequenceType,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(Encode, Decode)]
+#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
 pub struct TransferTokenData {
-	data: TransferToken,
-	signature: Vec<u8>,
+    data: TransferToken,
+    signature: Vec<u8>,
 }
 
 pub type ParaId = u32;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(Encode, Decode)]
+#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
 pub enum ChainId {
-	RelayChain,
-	ParaChain(ParaId),
+    RelayChain,
+    ParaChain(ParaId),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(Encode, Decode)]
+#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
 pub struct XCurrencyId {
-	pub chain_id: ChainId,
-	pub currency_id: Vec<u8>,
+    pub chain_id: ChainId,
+    pub currency_id: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(Encode, Decode)]
+#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
 pub enum NetworkId {
-	Any,
-	Named(Vec<u8>),
-	Polkadot,
-	Kusama,
+    Any,
+    Named(Vec<u8>),
+    Polkadot,
+    Kusama,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(Encode, Decode)]
+#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
 pub struct TransferXToken {
-	x_currency_id: XCurrencyId,
-	para_id: ParaId,
-	dest_network: NetworkId,
-	dest: AccountIdWrapper,
-	amount: chain::Balance,
-	sequence: SequenceType,
+    x_currency_id: XCurrencyId,
+    para_id: ParaId,
+    dest_network: NetworkId,
+    dest: AccountIdWrapper,
+    amount: chain::Balance,
+    sequence: SequenceType,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(Encode, Decode)]
+#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
 pub struct TransferXTokenData {
-	data: TransferXToken,
-	signature: Vec<u8>,
+    data: TransferXToken,
+    signature: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[derive(Encode, Decode)]
+#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
 pub enum TxQueue {
-	TransferTokenData(TransferTokenData),
-	TransferXTokenData(TransferXTokenData),
+    TransferTokenData(TransferTokenData),
+    TransferXTokenData(TransferXTokenData),
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Assets {
     next_id: u32,
-	assets: BTreeMap<AssetId, BTreeMap<AccountIdWrapper, chain::Balance>>,
-	metadata: BTreeMap<AssetId, AssetMetadata>,
+    assets: BTreeMap<AssetId, BTreeMap<AccountIdWrapper, chain::Balance>>,
+    metadata: BTreeMap<AssetId, AssetMetadata>,
     history: BTreeMap<AccountIdWrapper, Vec<AssetsTx>>,
-	sequence: SequenceType,
-	queue: Vec<TxQueue>,
-	#[serde(skip)]
-	pair: Option<ecdsa::Pair>,
+    sequence: SequenceType,
+    queue: Vec<TxQueue>,
+    #[serde(skip)]
+    pair: Option<ecdsa::Pair>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -133,9 +125,9 @@ pub enum Error {
 pub enum Command {
     Issue {
         symbol: String,
-		decimal: u8,
+        decimal: u8,
         #[serde(with = "super::serde_balance")]
-        total: chain::Balance
+        total: chain::Balance,
     },
     Destroy {
         id: String,
@@ -146,66 +138,66 @@ pub enum Command {
         #[serde(with = "super::serde_balance")]
         value: chain::Balance,
     },
-	TransferTokenToChain {
-		id: String,
-		dest: AccountIdWrapper,
-		#[serde(with = "super::serde_balance")]
-		value: chain::Balance,
-	},
-	TransferXTokenToChain {
-		x_currency_id: XCurrencyId,
-		para_id: ParaId,
-		dest_network: NetworkId,
-		dest: AccountIdWrapper,
-		#[serde(with = "super::serde_balance")]
-		value: chain::Balance,
-	},
+    TransferTokenToChain {
+        id: String,
+        dest: AccountIdWrapper,
+        #[serde(with = "super::serde_balance")]
+        value: chain::Balance,
+    },
+    TransferXTokenToChain {
+        x_currency_id: XCurrencyId,
+        para_id: ParaId,
+        dest_network: NetworkId,
+        dest: AccountIdWrapper,
+        #[serde(with = "super::serde_balance")]
+        value: chain::Balance,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Request {
     Balance {
         id: String,
-        account: AccountIdWrapper
+        account: AccountIdWrapper,
     },
     TotalSupply {
-        id: String
+        id: String,
     },
     Metadata,
     History {
-        account: AccountIdWrapper
+        account: AccountIdWrapper,
     },
     ListAssets {
-        available_only :bool
+        available_only: bool,
     },
-	PendingChainTransfer {
-		sequence: SequenceType
-	},
+    PendingChainTransfer {
+        sequence: SequenceType,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Response {
     Balance {
         #[serde(with = "super::serde_balance")]
-        balance: chain::Balance
+        balance: chain::Balance,
     },
     TotalSupply {
         #[serde(with = "super::serde_balance")]
-        total_issuance: chain::Balance
+        total_issuance: chain::Balance,
     },
     Metadata {
-        metadata: Vec<AssetMetadata>
+        metadata: Vec<AssetMetadata>,
     },
     History {
-        history: Vec<AssetsTx>
+        history: Vec<AssetsTx>,
     },
     ListAssets {
-        assets: Vec<AssetMetadataBalance>
+        assets: Vec<AssetMetadataBalance>,
     },
-	PendingChainTransfer {
-		transfer_queue_b64: String,
-	},
-    Error(Error)
+    PendingChainTransfer {
+        transfer_queue_b64: String,
+    },
+    Error(Error),
 }
 
 const ALICE: &'static str = "d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d";
@@ -214,62 +206,77 @@ const SYMBOL: &'static str = "TTT";
 const DECIMAL: u8 = 12;
 
 impl Assets {
-	pub fn new(pair: Option<ecdsa::Pair>) -> Self{
-		let mut assets = BTreeMap::<AssetId, BTreeMap::<AccountIdWrapper, chain::Balance>>::new();
-		let mut metadata = BTreeMap::<AssetId, AssetMetadata>::new();
+    pub fn new(pair: Option<ecdsa::Pair>) -> Self {
+        let mut assets = BTreeMap::<AssetId, BTreeMap<AccountIdWrapper, chain::Balance>>::new();
+        let mut metadata = BTreeMap::<AssetId, AssetMetadata>::new();
 
         let owner = AccountIdWrapper::from_hex(ALICE);
         let symbol = String::from(SYMBOL);
         let mut accounts = BTreeMap::<AccountIdWrapper, chain::Balance>::new();
         accounts.insert(owner.clone(), SUPPLY);
 
-		let id = 0u32.to_le_bytes().to_vec();
+        let id = 0u32.to_le_bytes().to_vec();
         let metadatum = AssetMetadata {
             owner: owner.clone(),
             total_supply: SUPPLY,
             symbol,
-			decimal: DECIMAL,
-			id: id.clone(),
+            decimal: DECIMAL,
+            id: id.clone(),
         };
 
-		metadata.insert(id.clone(), metadatum);
-		assets.insert(id, accounts);
+        metadata.insert(id.clone(), metadatum);
+        assets.insert(id, accounts);
 
-		Assets {
-			next_id: 1,
-			assets,
-			metadata,
-			history: Default::default(),
-			sequence: 0,
-			queue: Vec::new(),
-			pair,
-		}
+        Assets {
+            next_id: 1,
+            assets,
+            metadata,
+            history: Default::default(),
+            sequence: 0,
+            queue: Vec::new(),
+            pair,
+        }
     }
 }
 
 impl contracts::Contract<Command, Request, Response> for Assets {
-    fn id(&self) -> contracts::ContractId { contracts::ASSETS }
+    fn id(&self) -> contracts::ContractId {
+        contracts::ASSETS
+    }
 
-    fn handle_command(&mut self, origin: &chain::AccountId, txref: &TxRef, cmd: Command) -> TransactionStatus {
+    fn handle_command(
+        &mut self,
+        origin: &chain::AccountId,
+        txref: &TxRef,
+        cmd: Command,
+    ) -> TransactionStatus {
         match cmd {
-			Command::Issue {symbol, decimal, total} => {
-				if decimal == 0 {
-					return TransactionStatus::BadDecimal;
-				}
+            Command::Issue {
+                symbol,
+                decimal,
+                total,
+            } => {
+                if decimal == 0 {
+                    return TransactionStatus::BadDecimal;
+                }
                 let o = AccountIdWrapper(origin.clone());
                 println!("Issue: [{}] -> [{}]: {}", o.to_string(), symbol, total);
 
-                if let None = self.metadata.iter().find(|(_, metadatum)| metadatum.symbol == symbol) {
+                if let None = self
+                    .metadata
+                    .iter()
+                    .find(|(_, metadatum)| metadatum.symbol == symbol)
+                {
                     let mut accounts = BTreeMap::<AccountIdWrapper, chain::Balance>::new();
                     accounts.insert(o.clone(), total);
 
-					let id = self.next_id.to_le_bytes().to_vec();
+                    let id = self.next_id.to_le_bytes().to_vec();
                     let metadatum = AssetMetadata {
                         owner: o.clone(),
                         total_supply: total,
                         symbol,
-						decimal,
-						id: id.clone(),
+                        decimal,
+                        id: id.clone(),
                     };
 
                     self.metadata.insert(id.clone(), metadatum);
@@ -280,38 +287,44 @@ impl contracts::Contract<Command, Request, Response> for Assets {
                 } else {
                     TransactionStatus::SymbolExist
                 }
-            },
-            Command::Destroy {id} => {
+            }
+            Command::Destroy { id } => {
                 let o = AccountIdWrapper(origin.clone());
 
-				let token_id = hex::decode_hex(&id);
-				if let Some(metadatum) = self.metadata.get(&token_id) {
+                let token_id = hex::decode_hex(&id);
+                if let Some(metadatum) = self.metadata.get(&token_id) {
                     if metadatum.owner.to_string() == o.to_string() {
-						if metadatum.decimal > 0 {
-							self.metadata.remove(&token_id);
-							self.assets.remove(&token_id);
+                        if metadatum.decimal > 0 {
+                            self.metadata.remove(&token_id);
+                            self.assets.remove(&token_id);
 
-							TransactionStatus::Ok
-						} else {
-							TransactionStatus::DestroyNotAllowed
-						}
+                            TransactionStatus::Ok
+                        } else {
+                            TransactionStatus::DestroyNotAllowed
+                        }
                     } else {
                         TransactionStatus::NotAssetOwner
                     }
                 } else {
                     TransactionStatus::AssetIdNotFound
                 }
-            },
-            Command::Transfer {id, dest, value} => {
+            }
+            Command::Transfer { id, dest, value } => {
                 let o = AccountIdWrapper(origin.clone());
 
-				println!("Transfer id:{:?}", id);
-				let token_id = hex::decode_hex(&id);
-				println!("Transfer token id:{:?}", token_id.clone());
-				if let Some(metadatum) = self.metadata.get(&token_id) {
+                println!("Transfer id:{:?}", id);
+                let token_id = hex::decode_hex(&id);
+                println!("Transfer token id:{:?}", token_id.clone());
+                if let Some(metadatum) = self.metadata.get(&token_id) {
                     let accounts = self.assets.get_mut(&metadatum.id).unwrap();
 
-					println!("Transfer: [{}] -> [{}]: {:?}, {}", o.to_string(), dest.to_string(), token_id, value);
+                    println!(
+                        "Transfer: [{}] -> [{}]: {:?}, {}",
+                        o.to_string(),
+                        dest.to_string(),
+                        token_id,
+                        value
+                    );
                     if let Some(src_amount) = accounts.get_mut(&o) {
                         if *src_amount >= value {
                             let src0 = *src_amount;
@@ -333,7 +346,7 @@ impl contracts::Contract<Command, Request, Response> for Assets {
                                 asset_id: token_id,
                                 from: o.clone(),
                                 to: dest.clone(),
-                                amount: value
+                                amount: value,
                             };
                             if is_tracked(&o) {
                                 let slot = self.history.entry(o).or_default();
@@ -356,110 +369,138 @@ impl contracts::Contract<Command, Request, Response> for Assets {
                 } else {
                     TransactionStatus::AssetIdNotFound
                 }
-			},
-			Command::TransferTokenToChain {id, dest, value} => {
-				let o = AccountIdWrapper(origin.clone());
-				let token_id = hex::decode_hex(&id);
-				if let Some(metadatum) = self.metadata.get_mut(&token_id) {
-					let accounts = self.assets.get_mut(&metadatum.id).unwrap();
+            }
+            Command::TransferTokenToChain { id, dest, value } => {
+                let o = AccountIdWrapper(origin.clone());
+                let token_id = hex::decode_hex(&id);
+                if let Some(metadatum) = self.metadata.get_mut(&token_id) {
+                    let accounts = self.assets.get_mut(&metadatum.id).unwrap();
 
-					println!("Transfer token to chain: [{}] -> [{}]: {:?}, {}", o.to_string(), dest.to_string(), token_id, value);
-					if let Some(src_amount) = accounts.get_mut(&o) {
-						if *src_amount >= value {
-							if self.pair.is_none() {
-								println!("Secret error");
-								return TransactionStatus::BadSecret;
-							}
+                    println!(
+                        "Transfer token to chain: [{}] -> [{}]: {:?}, {}",
+                        o.to_string(),
+                        dest.to_string(),
+                        token_id,
+                        value
+                    );
+                    if let Some(src_amount) = accounts.get_mut(&o) {
+                        if *src_amount >= value {
+                            if self.pair.is_none() {
+                                println!("Secret error");
+                                return TransactionStatus::BadSecret;
+                            }
 
-							let src0 = *src_amount;
-							*src_amount -= value;
+                            let src0 = *src_amount;
+                            *src_amount -= value;
 
-							metadatum.total_supply -= value;
+                            metadatum.total_supply -= value;
 
-							println!("   src: {:>20} -> {:>20}", src0, src0 - value);
+                            println!("   src: {:>20} -> {:>20}", src0, src0 - value);
 
-							let sequence = self.sequence + 1;
+                            let sequence = self.sequence + 1;
 
-							let data = TransferToken {
-								token_id,
-								dest,
-								amount: value,
-								sequence,
-							};
+                            let data = TransferToken {
+                                token_id,
+                                dest,
+                                amount: value,
+                                sequence,
+                            };
 
-							let pair = self.pair.as_ref().unwrap();
-							let sig = pair.sign(&Encode::encode(&data));
-							let transfer_data = TransferTokenData {
-								data,
-								signature: sig.0.to_vec(),
-							};
-							self.queue.push(TxQueue::TransferTokenData(transfer_data));
-							self.sequence = sequence;
+                            let pair = self.pair.as_ref().unwrap();
+                            let sig = pair.sign(&Encode::encode(&data));
+                            let transfer_data = TransferTokenData {
+                                data,
+                                signature: sig.0.to_vec(),
+                            };
+                            self.queue.push(TxQueue::TransferTokenData(transfer_data));
+                            self.sequence = sequence;
 
-							TransactionStatus::Ok
-						} else {
-							TransactionStatus::InsufficientBalance
-						}
-					} else {
-						TransactionStatus::NoBalance
-					}
-				} else {
-					TransactionStatus::AssetIdNotFound
-				}
-			},
-			Command::TransferXTokenToChain {x_currency_id, para_id, dest_network, dest, value} => {
-				let o = AccountIdWrapper(origin.clone());
-				println!("Transfer xtoken to chain: [{}] -> [{}]: {:?}, {}", o.to_string(), dest.to_string(), x_currency_id, value);
-				//TODO:
-				let token_id = [ChainId::encode(&x_currency_id.chain_id), x_currency_id.currency_id.clone()].concat();
+                            TransactionStatus::Ok
+                        } else {
+                            TransactionStatus::InsufficientBalance
+                        }
+                    } else {
+                        TransactionStatus::NoBalance
+                    }
+                } else {
+                    TransactionStatus::AssetIdNotFound
+                }
+            }
+            Command::TransferXTokenToChain {
+                x_currency_id,
+                para_id,
+                dest_network,
+                dest,
+                value,
+            } => {
+                let o = AccountIdWrapper(origin.clone());
+                println!(
+                    "Transfer xtoken to chain: [{}] -> [{}]: {:?}, {}",
+                    o.to_string(),
+                    dest.to_string(),
+                    x_currency_id,
+                    value
+                );
+                //TODO:
+                let token_id = [
+                    ChainId::encode(&x_currency_id.chain_id),
+                    x_currency_id.currency_id.clone(),
+                ]
+                .concat();
 
-				if let Some(metadatum) = self.metadata.get_mut(&token_id) {
-					let accounts = self.assets.get_mut(&metadatum.id).unwrap();
-					println!("Transfer xtoken to chain: [{}] -> [{}]: {:?}, {}", o.to_string(), dest.to_string(), token_id, value);
-					if let Some(src_amount) = accounts.get_mut(&o) {
-						if *src_amount >= value {
-							if self.pair.is_none() {
-								println!("Secret error");
-								return TransactionStatus::BadSecret;
-							}
+                if let Some(metadatum) = self.metadata.get_mut(&token_id) {
+                    let accounts = self.assets.get_mut(&metadatum.id).unwrap();
+                    println!(
+                        "Transfer xtoken to chain: [{}] -> [{}]: {:?}, {}",
+                        o.to_string(),
+                        dest.to_string(),
+                        token_id,
+                        value
+                    );
+                    if let Some(src_amount) = accounts.get_mut(&o) {
+                        if *src_amount >= value {
+                            if self.pair.is_none() {
+                                println!("Secret error");
+                                return TransactionStatus::BadSecret;
+                            }
 
-							let src0 = *src_amount;
-							*src_amount -= value;
+                            let src0 = *src_amount;
+                            *src_amount -= value;
 
-							metadatum.total_supply -= value;
+                            metadatum.total_supply -= value;
 
-							println!("   src: {:>20} -> {:>20}", src0, src0 - value);
+                            println!("   src: {:>20} -> {:>20}", src0, src0 - value);
 
-							let sequence = self.sequence + 1;
+                            let sequence = self.sequence + 1;
 
-							let data = TransferXToken {
-								x_currency_id,
-								para_id,
-								dest_network,
-								dest,
-								amount: value,
-								sequence,
-							};
+                            let data = TransferXToken {
+                                x_currency_id,
+                                para_id,
+                                dest_network,
+                                dest,
+                                amount: value,
+                                sequence,
+                            };
 
-							let pair = self.pair.as_ref().unwrap();
-							let sig = pair.sign(&Encode::encode(&data));
-							let transfer_data = TransferXTokenData {
-								data,
-								signature: sig.0.to_vec(),
-							};
-							self.queue.push(TxQueue::TransferXTokenData(transfer_data));
-							self.sequence = sequence;
+                            let pair = self.pair.as_ref().unwrap();
+                            let sig = pair.sign(&Encode::encode(&data));
+                            let transfer_data = TransferXTokenData {
+                                data,
+                                signature: sig.0.to_vec(),
+                            };
+                            self.queue.push(TxQueue::TransferXTokenData(transfer_data));
+                            self.sequence = sequence;
 
-							TransactionStatus::Ok
-						} else {
-							TransactionStatus::InsufficientBalance
-						}
-					} else {
-						TransactionStatus::NoBalance
-					}
-				} else {
-					TransactionStatus::AssetIdNotFound
-				}
+                            TransactionStatus::Ok
+                        } else {
+                            TransactionStatus::InsufficientBalance
+                        }
+                    } else {
+                        TransactionStatus::NoBalance
+                    }
+                } else {
+                    TransactionStatus::AssetIdNotFound
+                }
             }
         }
     }
@@ -469,11 +510,11 @@ impl contracts::Contract<Command, Request, Response> for Assets {
             match req {
                 Request::Balance { id, account } => {
                     if origin == None || origin.unwrap() != &account.0 {
-                        return Err(Error::NotAuthorized)
+                        return Err(Error::NotAuthorized);
                     }
 
-					let token_id = hex::decode_hex(&id);
-					if let Some(metadatum) = self.metadata.get(&token_id) {
+                    let token_id = hex::decode_hex(&id);
+                    if let Some(metadatum) = self.metadata.get(&token_id) {
                         let accounts = self.assets.get(&metadatum.id).unwrap();
                         let mut balance: chain::Balance = 0;
                         if let Some(ba) = accounts.get(&account) {
@@ -483,22 +524,28 @@ impl contracts::Contract<Command, Request, Response> for Assets {
                     } else {
                         Err(Error::Other(String::from("Asset not found")))
                     }
-                },
+                }
                 Request::TotalSupply { id } => {
-					let token_id = hex::decode_hex(&id);
-					if let Some(metadatum) = self.metadata.get(&token_id) {
-                        Ok(Response::TotalSupply { total_issuance: metadatum.total_supply })
+                    let token_id = hex::decode_hex(&id);
+                    if let Some(metadatum) = self.metadata.get(&token_id) {
+                        Ok(Response::TotalSupply {
+                            total_issuance: metadatum.total_supply,
+                        })
                     } else {
                         Err(Error::Other(String::from("Asset not found")))
                     }
-                },
-                Request::Metadata => {
-                    Ok(Response::Metadata { metadata: self.metadata.values().cloned().collect() })
-                },
+                }
+                Request::Metadata => Ok(Response::Metadata {
+                    metadata: self.metadata.values().cloned().collect(),
+                }),
                 Request::History { account } => {
-                    let tx_list = self.history.get(&account).cloned().unwrap_or(Default::default());
+                    let tx_list = self
+                        .history
+                        .get(&account)
+                        .cloned()
+                        .unwrap_or(Default::default());
                     Ok(Response::History { history: tx_list })
-                },
+                }
                 Request::ListAssets { available_only } => {
                     let raw_origin = origin.ok_or(Error::NotAuthorized)?;
                     let o = AccountIdWrapper(raw_origin.clone());
@@ -511,10 +558,7 @@ impl contracts::Contract<Command, Request, Response> for Assets {
                             })
                             .map(|(id, balance)| {
                                 let metadata = self.metadata.get(id).unwrap().clone();
-                                AssetMetadataBalance {
-                                    metadata,
-                                    balance
-                                }
+                                AssetMetadataBalance { metadata, balance }
                             })
                             .collect()
                     } else {
@@ -523,123 +567,136 @@ impl contracts::Contract<Command, Request, Response> for Assets {
                             .map(|(id, balances)| {
                                 let metadata = self.metadata.get(id).unwrap().clone();
                                 let balance = *balances.get(&o).unwrap_or(&0);
-                                AssetMetadataBalance {
-                                    metadata,
-                                    balance
-                                }
+                                AssetMetadataBalance { metadata, balance }
                             })
                             .collect()
                     };
-                    Ok(Response::ListAssets {assets})
-				},
-				Request::PendingChainTransfer {sequence} => {
-					println!("PendingChainTransferToken");
-					let transfer_queue: Vec<&TxQueue> = self.queue.iter().filter(|x| {
-						match x {
-							TxQueue::TransferTokenData(tx) => {
-								if tx.data.sequence > sequence {
-									return true;
-								}
+                    Ok(Response::ListAssets { assets })
+                }
+                Request::PendingChainTransfer { sequence } => {
+                    println!("PendingChainTransferToken");
+                    let transfer_queue: Vec<&TxQueue> = self
+                        .queue
+                        .iter()
+                        .filter(|x| match x {
+                            TxQueue::TransferTokenData(tx) => {
+                                if tx.data.sequence > sequence {
+                                    return true;
+                                }
 
-								false
-							},
-							TxQueue::TransferXTokenData(tx) => {
-								if tx.data.sequence > sequence {
-									return true;
-								}
+                                false
+                            }
+                            TxQueue::TransferXTokenData(tx) => {
+                                if tx.data.sequence > sequence {
+                                    return true;
+                                }
 
-								false
-							}
-						}
-					}).collect::<_>();
+                                false
+                            }
+                        })
+                        .collect::<_>();
 
-					Ok(Response::PendingChainTransfer { transfer_queue_b64: base64::encode(&transfer_queue.encode()) } )
+                    Ok(Response::PendingChainTransfer {
+                        transfer_queue_b64: base64::encode(&transfer_queue.encode()),
+                    })
                 }
             }
         };
         match inner() {
             Err(error) => Response::Error(error),
-            Ok(resp) => resp
+            Ok(resp) => resp,
         }
     }
 
-	fn handle_event(&mut self, ce: chain::Event) {
-		if let chain::Event::pallet_phala(pe) = ce {
-			if let phala::RawEvent::TransferTokenToTee(who, token_id, amount) = pe {
-				println!("TransferTokenToTee from: {:?}, token id: {:?}, amount: {:}", who, token_id, amount);
-				let dest = AccountIdWrapper(who);
-				println!("   dest: {}", dest.to_string());
-				if let Some(metadatum) = self.metadata.get_mut(&token_id) {
-					let accounts = self.assets.get_mut(&metadatum.id).unwrap();
-					if let Some(dest_amount) = accounts.get_mut(&dest) {
-						let dest_amount0 = *dest_amount;
-						*dest_amount += amount;
-						println!("   value: {:>20} -> {:>20}", dest_amount0, *dest_amount);
-					} else {
-						accounts.insert(dest, amount);
-						println!("   value: {:>20} -> {:>20}", 0, amount);
-					}
-					metadatum.total_supply += amount;
-				} else {
-					println!("unknown token id: {:?}", token_id);
-				}
-			} else {
-				let sequence = match pe {
-					phala::RawEvent::TransferTokenToChain(who, token_id, amount, sequence) => {
-						println!("TransferTokenToChain who: {:?}, token id: {:?}, amount: {:}", who, token_id, amount);
-						sequence
-					},
-					phala::RawEvent::TransferXTokenToChain(who, xtoken_id, amount, sequence) => {
-						println!("TransferXTokenToChain who: {:?}, xtoken id: {:?}, amount: {:}", who, xtoken_id, amount);
-						sequence
-					},
-					_ => return
-				};
+    fn handle_event(&mut self, ce: chain::Event) {
+        if let chain::Event::pallet_phala(pe) = ce {
+            if let phala::RawEvent::TransferTokenToTee(who, token_id, amount) = pe {
+                println!(
+                    "TransferTokenToTee from: {:?}, token id: {:?}, amount: {:}",
+                    who, token_id, amount
+                );
+                let dest = AccountIdWrapper(who);
+                println!("   dest: {}", dest.to_string());
+                if let Some(metadatum) = self.metadata.get_mut(&token_id) {
+                    let accounts = self.assets.get_mut(&metadatum.id).unwrap();
+                    if let Some(dest_amount) = accounts.get_mut(&dest) {
+                        let dest_amount0 = *dest_amount;
+                        *dest_amount += amount;
+                        println!("   value: {:>20} -> {:>20}", dest_amount0, *dest_amount);
+                    } else {
+                        accounts.insert(dest, amount);
+                        println!("   value: {:>20} -> {:>20}", 0, amount);
+                    }
+                    metadatum.total_supply += amount;
+                } else {
+                    println!("unknown token id: {:?}", token_id);
+                }
+            } else {
+                let sequence = match pe {
+                    phala::RawEvent::TransferTokenToChain(who, token_id, amount, sequence) => {
+                        println!(
+                            "TransferTokenToChain who: {:?}, token id: {:?}, amount: {:}",
+                            who, token_id, amount
+                        );
+                        sequence
+                    }
+                    phala::RawEvent::TransferXTokenToChain(who, xtoken_id, amount, sequence) => {
+                        println!(
+                            "TransferXTokenToChain who: {:?}, xtoken id: {:?}, amount: {:}",
+                            who, xtoken_id, amount
+                        );
+                        sequence
+                    }
+                    _ => return,
+                };
 
-				self.queue.retain(|x| {
-					let sequence_in_queue = match x {
-						TxQueue::TransferTokenData(tx) => tx.data.sequence,
-						TxQueue:: TransferXTokenData(tx) => tx.data.sequence,
-					};
-					sequence_in_queue > sequence
-				});
-				println!("queue len: {:}", self.queue.len());
-			}
-		} else if let chain::Event::xcm_transactor(xa) = ce {
-			if let xcm_transactor::RawEvent::DepositAsset(xtoken_id, who, amount, _) = xa {
-				println!("DepositAsset from: {:?}, xtoken id: {:?}, amount: {:}", who, xtoken_id, amount);
-				let dest = AccountIdWrapper(who);
-				println!("   dest: {}", dest.to_string());
-				if let Some(metadatum) = self.metadata.get_mut(&xtoken_id) {
-					let accounts = self.assets.get_mut(&metadatum.id).unwrap();
-					if let Some(dest_amount) = accounts.get_mut(&dest) {
-						let dest_amount0 = *dest_amount;
-						*dest_amount += amount;
-						println!("   value: {:>20} -> {:>20}", dest_amount0, *dest_amount);
-					} else {
-						accounts.insert(dest, amount);
-						println!("   value: {:>20} -> {:>20}", 0, amount);
-					}
-					metadatum.total_supply += amount;
-				} else {
-					//create new token metadata
-					let mut accounts = BTreeMap::<AccountIdWrapper, chain::Balance>::new();
-					accounts.insert(dest, amount);
+                self.queue.retain(|x| {
+                    let sequence_in_queue = match x {
+                        TxQueue::TransferTokenData(tx) => tx.data.sequence,
+                        TxQueue::TransferXTokenData(tx) => tx.data.sequence,
+                    };
+                    sequence_in_queue > sequence
+                });
+                println!("queue len: {:}", self.queue.len());
+            }
+        } else if let chain::Event::xcm_transactor(xa) = ce {
+            if let xcm_transactor::RawEvent::DepositAsset(xtoken_id, who, amount, _) = xa {
+                println!(
+                    "DepositAsset from: {:?}, xtoken id: {:?}, amount: {:}",
+                    who, xtoken_id, amount
+                );
+                let dest = AccountIdWrapper(who);
+                println!("   dest: {}", dest.to_string());
+                if let Some(metadatum) = self.metadata.get_mut(&xtoken_id) {
+                    let accounts = self.assets.get_mut(&metadatum.id).unwrap();
+                    if let Some(dest_amount) = accounts.get_mut(&dest) {
+                        let dest_amount0 = *dest_amount;
+                        *dest_amount += amount;
+                        println!("   value: {:>20} -> {:>20}", dest_amount0, *dest_amount);
+                    } else {
+                        accounts.insert(dest, amount);
+                        println!("   value: {:>20} -> {:>20}", 0, amount);
+                    }
+                    metadatum.total_supply += amount;
+                } else {
+                    //create new token metadata
+                    let mut accounts = BTreeMap::<AccountIdWrapper, chain::Balance>::new();
+                    accounts.insert(dest, amount);
 
-					let metadatum = AssetMetadata {
-						owner: Default::default(),
-						total_supply: amount,
-						symbol: "".to_string(),
-						decimal: 0,
-						id: xtoken_id.clone(),
-					};
+                    let metadatum = AssetMetadata {
+                        owner: Default::default(),
+                        total_supply: amount,
+                        symbol: "".to_string(),
+                        decimal: 0,
+                        id: xtoken_id.clone(),
+                    };
 
-					self.metadata.insert(xtoken_id.clone(), metadatum);
-					self.assets.insert(xtoken_id.clone(), accounts);
-				}
-			}
-		}
-	}
+                    self.metadata.insert(xtoken_id.clone(), metadatum);
+                    self.assets.insert(xtoken_id.clone(), accounts);
+                }
+            }
+        }
+    }
 }
 
 fn is_tracked(_id: &AccountIdWrapper) -> bool {
@@ -647,12 +704,16 @@ fn is_tracked(_id: &AccountIdWrapper) -> bool {
 }
 
 impl core::fmt::Debug for Assets {
-	fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-		write!(f, r#"Assets {{
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        write!(
+            f,
+            r#"Assets {{
             next_id: {:?},
             history: {:?},
             sequence: {:?},
             queue: {:?},
-        }}"#, self.next_id, self.history, self.sequence, self.queue)
-	}
+        }}"#,
+            self.next_id, self.history, self.sequence, self.queue
+        )
+    }
 }

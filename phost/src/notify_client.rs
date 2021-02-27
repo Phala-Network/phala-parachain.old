@@ -1,19 +1,17 @@
+use hyper::error::Result;
 use hyper::Client as HttpClient;
 use hyper::{Body, Method, Request, Response};
-use hyper::error::Result;
 
-use crate::types::{
-    NotifyReq
-};
+use crate::types::NotifyReq;
 
 pub struct NotifyClient {
-    base_url: String
+    base_url: String,
 }
 
 impl NotifyClient {
     pub fn new(base_url: &str) -> Self {
         NotifyClient {
-            base_url: base_url.to_string()
+            base_url: base_url.to_string(),
         }
     }
 
@@ -30,7 +28,8 @@ impl NotifyClient {
             .method(Method::POST)
             .uri(&self.base_url)
             .header("content-type", "application/json")
-            .body(Body::from(body_json)).unwrap();
+            .body(Body::from(body_json))
+            .unwrap();
 
         let res = client.request(req).await;
 

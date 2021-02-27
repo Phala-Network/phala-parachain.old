@@ -16,34 +16,17 @@
 
 use sp_runtime::{
     generic::Header,
-    traits::{
-        BlakeTwo256,
-        IdentifyAccount,
-        Verify,
-    },
-    MultiSignature,
-    OpaqueExtrinsic,
+    traits::{BlakeTwo256, IdentifyAccount, Verify},
+    MultiSignature, OpaqueExtrinsic,
 };
 
 use subxt::{
+    balances::{AccountData, Balances, BalancesEventTypeRegistry},
     extrinsic::DefaultExtra,
-    balances::{
-        AccountData,
-        Balances,
-        BalancesEventTypeRegistry,
-    },
-    sudo::{
-        Sudo,
-        SudoEventTypeRegistry,
-    },
-    system::{
-        System,
-        SystemEventTypeRegistry,
-    },
-    EventTypeRegistry,
-    Runtime,
-    BasicSessionKeys,
-    register_default_type_sizes
+    register_default_type_sizes,
+    sudo::{Sudo, SudoEventTypeRegistry},
+    system::{System, SystemEventTypeRegistry},
+    BasicSessionKeys, EventTypeRegistry, Runtime,
 };
 
 use self::phala::PhalaModuleEventTypeRegistry;
@@ -96,9 +79,9 @@ impl mining_staking::MiningStaking for PhalaNodeRuntime {}
 pub mod grandpa {
     use super::PhalaNodeRuntime;
     use codec::Encode;
-    use subxt::{module, Store, system::System};
     use core::marker::PhantomData;
     use pallet_grandpa::fg_primitives::SetId;
+    use subxt::{module, system::System, Store};
 
     #[module]
     pub trait Grandpa: System {}
@@ -114,20 +97,16 @@ pub mod grandpa {
     impl<T: Grandpa> CurrentSetIdStore<T> {
         pub fn new() -> Self {
             Self {
-                _runtime: Default::default()
+                _runtime: Default::default(),
             }
         }
     }
 }
 
 pub mod phala {
-    use codec::{Encode, Decode};
-    use subxt::{
-        module, Call, Store,
-        system::System,
-        balances::Balances
-    };
+    use codec::{Decode, Encode};
     use core::marker::PhantomData;
+    use subxt::{balances::Balances, module, system::System, Call, Store};
 
     use phala_types::{BlockRewardInfo, PayoutReason};
 
@@ -135,7 +114,6 @@ pub mod phala {
     pub struct EthereumTxHash([u8; 32]);
     #[derive(Encode, Decode, Debug, Default, Clone, PartialEq, Eq)]
     pub struct EthereumAddress([u8; 20]);
-
 
     #[module]
     pub trait PhalaModule: System + Balances {
@@ -170,23 +148,23 @@ pub mod phala {
         pub data: Vec<u8>,
     }
 
-	/// The call to transfer_token_to_chain
-	#[derive(Clone, Debug, PartialEq, Call, Encode)]
-	pub struct TransferTokenToChainCall<T: PhalaModule> {
-		/// Runtime marker
-		pub _runtime: PhantomData<T>,
-		/// The transfer transaction data, SCALA encoded
-		pub data: Vec<u8>,
-	}
+    /// The call to transfer_token_to_chain
+    #[derive(Clone, Debug, PartialEq, Call, Encode)]
+    pub struct TransferTokenToChainCall<T: PhalaModule> {
+        /// Runtime marker
+        pub _runtime: PhantomData<T>,
+        /// The transfer transaction data, SCALA encoded
+        pub data: Vec<u8>,
+    }
 
-	/// The call to transfer_token_to_chain
-	#[derive(Clone, Debug, PartialEq, Call, Encode)]
-	pub struct TransferXTokenToChainCall<T: PhalaModule> {
-		/// Runtime marker
-		pub _runtime: PhantomData<T>,
-		/// The transfer transaction data, SCALA encoded
-		pub data: Vec<u8>,
-	}
+    /// The call to transfer_token_to_chain
+    #[derive(Clone, Debug, PartialEq, Call, Encode)]
+    pub struct TransferXTokenToChainCall<T: PhalaModule> {
+        /// Runtime marker
+        pub _runtime: PhantomData<T>,
+        /// The transfer transaction data, SCALA encoded
+        pub data: Vec<u8>,
+    }
 
     /// The call to register_worker
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
@@ -311,17 +289,12 @@ pub mod phala {
         /// The raw message, SCALE encoded
         pub msg: Vec<u8>,
     }
-
 }
 
 pub mod mining_staking {
     use codec::Encode;
-    use subxt::{
-        module, Store,
-        system::System,
-        balances::Balances
-    };
     use core::marker::PhantomData;
+    use subxt::{balances::Balances, module, system::System, Store};
 
     #[module]
     pub trait MiningStaking: System + Balances {}
