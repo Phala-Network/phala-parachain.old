@@ -1299,6 +1299,7 @@ fn dispatch_block(input: DispatchBlockReq) -> Result<Value, Value> {
             .as_ref()
             .expect("ECDH not initizlied"),
     );
+    // TODO: validate block inclusion (#9)
     let mut last_block = 0;
     let mut current_bn = first_block.block_header.number - 1;
     for block in blocks.iter() {
