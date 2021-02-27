@@ -391,7 +391,7 @@ async fn batch_sync_block(
             break;
         }
         // send out the longest batch and remove it from the input buffer
-        let mut block_batch: Vec<BlockWithEvents> = block_buf
+        let block_batch: Vec<BlockWithEvents> = block_buf
             .drain(..=(header_idx as usize))
             .collect();
         let header_batch: Vec<HeaderToSync> = block_batch
