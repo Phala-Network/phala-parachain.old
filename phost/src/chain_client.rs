@@ -149,8 +149,9 @@ pub async fn get_paraid_key(paraclient: &XtClient) -> Option<StorageKey> {
 	}
 }
 
-pub async fn get_parachain_heads(client: &XtClient, hash: Option<Hash>, storage_key: StorageKey) -> Option<Vec<u8>> {
-	get_storage(&client, hash, storage_key).await.unwrap()
+pub async fn get_parachain_heads(client: &XtClient, hash: Option<Hash>, storage_key: StorageKey
+) -> Result<Option<Vec<u8>>, Error> {
+	get_storage(&client, hash, storage_key).await
 }
 
 // Storage functions

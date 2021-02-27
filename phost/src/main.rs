@@ -432,11 +432,13 @@ async fn batch_sync_block(
         let r = req_sync_header(pr, &header_batch, authrotiy_change.as_ref()).await?;
         println!("  ..sync_header: {:?}", r);
 
-        let para_fin_header = chain_client::get_parachain_heads(&client,
-			Some(last_header_hash), paraid_storage_key.clone()).await;
-		if para_fin_header.is_some() {
-			let para_fin_hash = &para_fin_header.unwrap()[2..34];
-			let para_fin_block = paraclient.block(Some(H256::from_slice(para_fin_hash))).await?;
+        let para_fin_header_data = chain_client::get_parachain_heads(&client,
+			Some(last_header_hash), paraid_storage_key.clone()).await?;
+		let para_fin_header = sp_runtime::generic::Header::<u128, sp_runtime::traits::BlakeTwo256>::decode(
+			&mut &para_fin_header_data.unwrap()[2..]);
+		if para_fin_header.is_ok() {
+			let para_fin_hash = para_fin_header.unwrap().hash();
+			let para_fin_block = paraclient.block(Some(para_fin_hash)).await?;
 			if para_fin_block.is_some() {
 				let para_fin_block_number = para_fin_block.unwrap().block.header.number;
 				let mut para_blocks = Vec::new();
