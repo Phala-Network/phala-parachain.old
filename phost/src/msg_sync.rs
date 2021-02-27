@@ -6,7 +6,7 @@ use super::{
     error::Error,
     runtimes,
     types::{QueryRespData, ReqData, TransferData, TxQueue},
-    update_signer_nonce, PrClient, SrSigner, XtClient, ASSETS, BALANCES,
+    update_signer_nonce, PrClient, SrSigner, XtClient, BALANCES,
 };
 
 /// Hold everything needed to sync some egress messages back to the blockchain

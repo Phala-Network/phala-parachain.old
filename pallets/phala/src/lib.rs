@@ -35,7 +35,7 @@ use types::{
 	WorkerMessagePayload, WorkerStateEnum, TransferTokenData, TransferXTokenData, ChainId, XCurrencyId,
 };
 use cumulus_primitives_core::ParaId;
-use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm};
+use xcm::v0::{ExecuteXcm, Junction, MultiAsset, NetworkId, Order, Xcm};
 use xcm_executor::traits::LocationConversion;
 
 // constants
@@ -664,7 +664,7 @@ decl_module! {
 			T::AccountIdConverter::try_into_location(who.clone()).map_err(|_| Error::<T>::BadXCMLocation)?;
 			match T::XcmExecutor::execute_xcm(xcm_origin, xcm) {
 				Ok(_) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.x_currency_id.into(), transfer_data.data.amount, sequence + 1)),
-				Err(err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.x_currency_id.into(), transfer_data.data.amount, sequence + 1)),
+				Err(_err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.x_currency_id.into(), transfer_data.data.amount, sequence + 1)),
 			}
 
 			// Announce the successful execution

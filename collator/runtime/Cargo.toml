@@ -49,9 +49,9 @@ pallet-identity = { git = "https://github.com/paritytech/substrate", branch = "r
 pallet-recovery = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-democracy = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 
-pallet-phala = { path = "../../pallets/phala", package = "pallet-phala", default-features = false }
-pallet-claim = { path = "../../pallets/claim", package = "pallet-claim", default-features = false }
-pallet-mining-staking = { path = "../../pallets/mining_staking", package = "pallet-mining-staking", default-features = false }
+pallet-phala = { path = "../../pallets/phala", default-features = false }
+pallet-claim = { path = "../../pallets/claim", default-features = false }
+pallet-mining-staking = { path = "../../pallets/mining_staking", default-features = false }
 
 native-nostd-hasher = { path = "../../vendor/native-nostd-hasher", optional = true }
 
@@ -65,7 +65,7 @@ xcm = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", de
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
 
-xcm-handler = { version = "0.1.0", default-features = false, path = "../pallets/xcm-handler", package = "xcm-handler" }
+xcm-handler = { path = "../pallets/xcm-handler", default-features = false }
 xcm-transactor = { path = "../pallets/xcm-transactor", default-features = false }
 
 [build-dependencies]
@@ -74,6 +74,7 @@ substrate-wasm-builder = "4.0.0"
 [features]
 default = ["std", "include-wasm"]
 include-wasm = []
+native-nostd = ["native-nostd-hasher"]
 std = [
 	"codec/std",
 	"serde",
@@ -91,6 +92,7 @@ std = [
 	"frame-support/std",
 	"frame-executive/std",
 	"frame-system/std",
+	"frame-system-rpc-runtime-api/std",
 	"pallet-balances/std",
 	"pallet-randomness-collective-flip/std",
 	"pallet-timestamp/std",
@@ -105,6 +107,7 @@ std = [
 	"parachain-primitives/std",
 	"cumulus-pallet-parachain-system/std",
 	"cumulus-primitives-core/std",
+	"polkadot-parachain/std",
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
@@ -123,4 +126,3 @@ std = [
 	"pallet-claim/std",
 	"pallet-mining-staking/std"
 ]
-native-nostd = ["native-nostd-hasher"]

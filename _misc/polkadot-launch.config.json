@@ -24,7 +24,7 @@
 		{
 			"bin": "./bin/phala-collator",
 			"chain": "local",
-			"id": "2000",
+			"id": "30",
 			"wsPort": 9444,
 			"port": 34333,
 			"balance": "1000000000000000000000",
@@ -34,9 +34,9 @@
 			]
 		},
 		{
-			"bin": "./bin/phala-collator",
+			"bin": "./bin/collator",
 			"chain": "local",
-			"id": "5000",
+			"id": "100",
 			"wsPort": 9544,
 			"port": 35333,
 			"balance": "1000000000000000000000",
@@ -49,14 +49,14 @@
 	"simpleParachains": [],
 	"hrmpChannels": [
 		{
-			"sender": "2000",
-			"recipient": "5000",
+			"sender": "30",
+			"recipient": "100",
 			"maxCapacity": 8,
 			"maxMessageSize": 512
 		},
 		{
-			"sender": "5000",
-			"recipient": "2000",
+			"sender": "100",
+			"recipient": "30",
 			"maxCapacity": 8,
 			"maxMessageSize": 512
 		}

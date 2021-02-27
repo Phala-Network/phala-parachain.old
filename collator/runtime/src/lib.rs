@@ -73,7 +73,7 @@ use frame_system::{
 pub use frame_system::Call as SystemCall;
 pub use pallet_balances::Call as BalancesCall;
 pub use pallet_timestamp::Call as TimestampCall;
-#[cfg(any(feature = "std", feature = "native-nostd", test))]
+#[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{
 	Perbill, Permill, Percent, Perquintill,
@@ -88,12 +88,11 @@ use constants::{currency::*};
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
-	AccountId32Aliases, CurrencyAdapter, LocationInverter, ParentIsDefault, RelayChainAsNative,
+	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SovereignSignedViaLocation,
 };
 use xcm_executor::{
-	traits::{IsConcrete, NativeAsset},
 	Config, XcmExecutor,
 };
 use xcm_transactor::{AssetLocationFilter, ConcreteMatcher, XCurrencyIdConverter};

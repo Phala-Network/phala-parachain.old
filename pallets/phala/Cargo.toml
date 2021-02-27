@@ -11,7 +11,7 @@ repository = "https://github.com/Phala-Network/phala-blockchain"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-serde = { version = "1.0.101", default-features = false, optional = true }
+serde = { version = "1.0.101", default-features = false }
 codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
@@ -20,14 +20,14 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, optional = true }
-phala-types = { default-features = false, path = "../../common/types" }
+phala-types = { path = "../../common/types", default-features = false }
 
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 
-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "rococo-v1" }
-xcm-executor = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "rococo-v1" }
-cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus",  default-features = false, branch = "rococo-v1" }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
+xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
 
 chrono = { version = "0.4", default-features = false }
 itertools = { version = "0.8", default-features = false }
@@ -43,7 +43,7 @@ assert_matches = "1.4.0"
 hex-literal = "0.3.1"
 libsecp256k1 = { version = "0.3.2", default-features = false }
 rand = "0.7.3"
-pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
 [features]
 default = ['std']
@@ -55,9 +55,13 @@ std = [
     "frame-system/std",
     "sp-io/std",
     "sp-std/std",
-    "sp-core/full_crypto",
+    "sp-core/std",
     "frame-benchmarking/std",
-    "pallet-balances/std"
+    "pallet-randomness-collective-flip/std",
+    "pallet-balances/std",
+    "xcm/std",
+    "xcm-executor/std",
+    "cumulus-primitives-core/std"
 ]
 test = [
     "sp-core/full_crypto"

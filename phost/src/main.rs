@@ -5,7 +5,7 @@ use tokio::time::delay_for;
 
 use codec::{Decode, Encode};
 use core::marker::PhantomData;
-use sp_core::{crypto::Pair, sr25519, storage::StorageKey, H256};
+use sp_core::{crypto::Pair, sr25519, storage::StorageKey};
 use sp_finality_grandpa::{AuthorityList, SetId, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_rpc::number::NumberOrHex;
 use subxt::{system::AccountStoreExt, EventsDecoder, Signer};

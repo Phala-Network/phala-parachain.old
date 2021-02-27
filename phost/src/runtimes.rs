@@ -92,7 +92,7 @@ pub mod grandpa {
     use super::PhalaNodeRuntime;
     use codec::Encode;
     use core::marker::PhantomData;
-    use pallet_grandpa::fg_primitives::SetId;
+    use sp_finality_grandpa::SetId;
     use subxt::{module, system::System, Store};
 
     #[module]

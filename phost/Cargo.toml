@@ -24,14 +24,7 @@ subxt = { path = "../vendor/subxt", package = "substrate-subxt" }
 system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", package = "frame-system" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-sc-rpc-api = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-sc-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
-
-pallet-grandpa = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-# pallet-indices = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
-balances = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", package = "pallet-balances" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
 phala-types = { path = "../common/types" }

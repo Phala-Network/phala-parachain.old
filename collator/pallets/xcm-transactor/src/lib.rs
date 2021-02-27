@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-    debug, decl_error, decl_event, decl_module, decl_storage,
+    debug, decl_event, decl_module, decl_storage,
     traits::{Currency, ExistenceRequirement, Get, WithdrawReasons},
 };
 
@@ -251,7 +251,7 @@ impl<T: Get<MultiLocation>, B: TryFrom<u128>> MatchesFungible<B> for ConcreteMat
         if let MultiAsset::ConcreteFungible { id, amount } = a {
             if id == &T::get() {
                 return CheckedConversion::checked_from(*amount);
-            } else if let Some(Junction::GeneralKey(key)) = id.last() {
+            } else if let Some(Junction::GeneralKey(_key)) = id.last() {
                 return CheckedConversion::checked_from(*amount);
             } else {
                 return None;
