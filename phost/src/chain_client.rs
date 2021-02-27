@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use codec::FullCodec;
+use codec::{Decode, FullCodec};
 use sp_core::{storage::StorageKey, twox_128, twox_64};
 use phala_types::pruntime::{
     StorageKV, RawStorageKey, StorageProof,
@@ -151,7 +151,12 @@ pub async fn get_paraid_key(paraclient: &XtClient) -> Option<StorageKey> {
 
 pub async fn get_parachain_heads(client: &XtClient, hash: Option<Hash>, storage_key: StorageKey
 ) -> Result<Option<Vec<u8>>, Error> {
-	get_storage(&client, hash, storage_key).await
+	let head = get_storage(&client, hash, storage_key).await?;
+	Ok(match head {
+		Some(data) => Some(Vec::<u8>::decode(&mut data.as_slice())
+			.map_err(|_| Error::FailedToDecode)?),
+		None => None
+	})
 }
 
 // Storage functions
