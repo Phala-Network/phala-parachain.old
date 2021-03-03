@@ -27,6 +27,8 @@ cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branc
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
 
+parachain-utils = { path = "../../../common/parachain_utils", default-features = false }
+
 [features]
 default = ["std"]
 std = [

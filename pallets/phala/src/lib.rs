@@ -32,7 +32,7 @@ extern crate phala_types as types;
 use types::{
 	BlockRewardInfo, MinerStatsDelta, PRuntimeInfo, PayoutPrefs, PayoutReason, RoundInfo,
 	RoundStats, Score, SignedDataType, SignedWorkerMessage, StashInfo, TransferData, WorkerInfo,
-	WorkerMessagePayload, WorkerStateEnum, TransferTokenData, TransferXTokenData, ChainId, XCurrencyId,
+	WorkerMessagePayload, WorkerStateEnum, TransferTokenData, TransferXTokenData,
 };
 use cumulus_primitives_core::ParaId;
 use xcm::v0::{ExecuteXcm, Junction, MultiAsset, NetworkId, Order, Xcm};
@@ -654,7 +654,7 @@ decl_module! {
 
 			// build crosschain transfer XCM message
 			let xcm = Self::build_xtoken_transfering_xcm(
-				transfer_data.data.x_currency_id.clone(),
+				&transfer_data.data.currency_id,
 				transfer_data.data.para_id,
 				transfer_data.data.dest.clone(),
 				transfer_data.data.dest_network,
@@ -663,8 +663,8 @@ decl_module! {
 			let xcm_origin =
 			T::AccountIdConverter::try_into_location(who.clone()).map_err(|_| Error::<T>::BadXCMLocation)?;
 			match T::XcmExecutor::execute_xcm(xcm_origin, xcm) {
-				Ok(_) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.x_currency_id.into(), transfer_data.data.amount, sequence + 1)),
-				Err(_err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.x_currency_id.into(), transfer_data.data.amount, sequence + 1)),
+				Ok(_) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
+				Err(_err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
 			}
 
 			// Announce the successful execution
@@ -1442,18 +1442,28 @@ impl<T: Config> Module<T> where T::AccountId: Into<[u8; 32]> {
 	}
 
 	fn build_xtoken_transfering_xcm(
-		currency_id: XCurrencyId,
+		currency_id: &Vec<u8>,
 		dest_paraid: ParaId,
 		dest_account: T::AccountId,
 		dest_network: NetworkId,
 		amount: BalanceOf<T>
 	) -> Option<Xcm> {
+		use parachain_utils::AssetLocation;
+		use sp_std::convert::TryFrom;
 		// only support transfer parachain reserve token back to it's origin netowrk
-		if let ChainId::ParaChain(reserve_chain) = currency_id.chain_id {
-			if reserve_chain == dest_paraid {
+
+		let location = parachain_utils::from_encoded_asset_id(&currency_id)
+			.expect("Error while decoding currency_id; qed.");
+
+		match parachain_utils::AssetLocation::try_from(&location)
+			.expect("Error while matching asset location; qed.") {
+			AssetLocation::Parachain(reserve_chain) => {
+				if ParaId::from(reserve_chain) != dest_paraid {
+					panic!("Must transfer back to the reserve chain; qed.");
+				}
 				Some(Xcm::WithdrawAsset {
 					assets: vec![MultiAsset::ConcreteFungible {
-						id: currency_id.into(),
+						id: location,
 						amount: amount.saturated_into(),
 					}],
 					effects: vec![Order::InitiateReserveWithdraw {
@@ -1472,11 +1482,8 @@ impl<T: Config> Module<T> where T::AccountId: Into<[u8; 32]> {
 						}],
 					}],
 				})
-			} else {
-				None
-			}
-		} else {
-			None
+			},
+			_ => None,
 		}
 	}
 }

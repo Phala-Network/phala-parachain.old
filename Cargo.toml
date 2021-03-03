@@ -14,6 +14,7 @@ exclude = [
 members = [
 	"collator",
 	"collator/runtime",
+	"common/parachain_utils",
 	"common/types",
 	"pallets/phala",
 	"pallets/mining_staking",

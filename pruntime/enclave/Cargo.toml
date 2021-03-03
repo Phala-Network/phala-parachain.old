@@ -71,6 +71,7 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1
 
 fixed = { git = "https://github.com/encointer/substrate-fixed", package = "substrate-fixed", default-features = false }
 
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
 xcm-transactor = { path = "../../collator/pallets/xcm-transactor", default-features = false }
 
 [features]

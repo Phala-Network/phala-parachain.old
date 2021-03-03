@@ -10,7 +10,6 @@ use sp_runtime::{
     RuntimeDebug,
 };
 use sp_std::{
-    collections::btree_map::BTreeMap,
     convert::{TryInto, TryFrom},
     marker::PhantomData,
     prelude::*,
@@ -25,6 +24,8 @@ use xcm_executor::traits::{
     FilterAssetLocation, LocationConversion, MatchesFungible, NativeAsset, TransactAsset,
 };
 
+use parachain_utils as utils;
+
 #[derive(Encode, Decode, Eq, PartialEq, Clone, Copy, RuntimeDebug)]
 /// Identity of chain.
 pub enum ChainId {
@@ -32,37 +33,6 @@ pub enum ChainId {
     RelayChain,
     /// A parachain.
     ParaChain(ParaId),
-}
-
-#[derive(Encode, Decode, Eq, PartialEq, Clone, RuntimeDebug)]
-/// Identity of cross chain currency.
-pub struct PHAXCurrencyId {
-    /// The reserve chain of the currency. For instance, the reserve chain of
-    /// DOT is Polkadot.
-    pub chain_id: ChainId,
-    /// The identity of the currency.
-    pub currency_id: Vec<u8>,
-}
-
-impl PHAXCurrencyId {
-    pub fn new(chain_id: ChainId, currency_id: Vec<u8>) -> Self {
-        PHAXCurrencyId {
-            chain_id,
-            currency_id,
-        }
-    }
-}
-
-impl Into<MultiLocation> for PHAXCurrencyId {
-    fn into(self) -> MultiLocation {
-        MultiLocation::X1(Junction::GeneralKey(self.currency_id))
-    }
-}
-
-impl Into<Vec<u8>> for PHAXCurrencyId {
-    fn into(self) -> Vec<u8> {
-        [ChainId::encode(&self.chain_id), self.currency_id].concat()
-    }
 }
 
 type BalanceOf<T> =
@@ -74,7 +44,6 @@ pub trait Config: frame_system::Config {
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     type Matcher: MatchesFungible<BalanceOf<Self>>;
     type AccountIdConverter: LocationConversion<Self::AccountId>;
-    type XCurrencyIdConverter: XCurrencyIdConversion;
     type OwnedCurrency: Currency<Self::AccountId>;
     type ParaId: Get<ParaId>;
 }
@@ -116,8 +85,7 @@ where
 
 		let who = T::AccountIdConverter::from_location(location).ok_or(())?;
 		debug::info!("who: {:?}", who);
-		let currency_id =
-			T::XCurrencyIdConverter::from_asset(asset).ok_or(())?;
+		let currency_id = utils::to_encoded_asset_id(asset).or(Err(Error::FailedToDecode))?;
 		debug::info!("currency_id: {:?}", currency_id);
 		let amount: BalanceOf<T> = T::Matcher::matches_fungible(&asset)
 			.ok_or(())?
@@ -127,8 +95,8 @@ where
 		debug::info!("balance amount: {:?}", balance_amount);
 
 		let mut is_owned_currency = false;
-		if let ChainId::ParaChain(paraid) = currency_id.chain_id {
-			if T::ParaId::get() == paraid {
+		if let Ok(utils::AssetLocation::Parachain(paraid)) = utils::try_extract_asset_location(asset) {
+			if T::ParaId::get() == paraid.into() {
 				is_owned_currency = true;
 				let _ = T::OwnedCurrency::deposit_creating(&who, balance_amount);
 			}
@@ -146,8 +114,8 @@ where
     }
 
     fn withdraw_asset(
-    asset: &MultiAsset,
-    location: &MultiLocation,
+		asset: &MultiAsset,
+		location: &MultiLocation,
     ) -> result::Result<MultiAsset, Error> {
         debug::info!("--------------------- xdm-adapter: trying withdraw ---------------------------");
         debug::info!(
@@ -158,10 +126,9 @@ where
 
 		let who = T::AccountIdConverter::from_location(location).ok_or(())?;
 		debug::info!("who: {:?}", who);
-		let currency_id =
-			T::XCurrencyIdConverter::from_asset(asset).ok_or(())?;
+		let currency_id = utils::to_encoded_asset_id(asset).or(Err(Error::FailedToDecode))?;
 		debug::info!("currency_id: {:?}", currency_id);
-		let amount: BalanceOf<T> = T::Matcher::matches_fungible(&asset)
+		let amount: BalanceOf<T> = T::Matcher::matches_fungible(asset)
 			.ok_or(())?
 			.saturated_into();
 		debug::info!("amount: {:?}", amount);
@@ -169,8 +136,8 @@ where
 		debug::info!("balance amount: {:?}", balance_amount);
 
 		let mut is_owned_currency = false;
-		if let ChainId::ParaChain(paraid) = currency_id.chain_id {
-			if T::ParaId::get() == paraid {
+		if let Ok(utils::AssetLocation::Parachain(paraid)) = utils::try_extract_asset_location(asset) {
+			if T::ParaId::get() == paraid.into() {
 				is_owned_currency = true;
 				let _ = T::OwnedCurrency::withdraw(
 					&who,
@@ -194,57 +161,6 @@ where
     }
 }
 
-pub trait XCurrencyIdConversion {
-    fn from_asset(
-        asset: &MultiAsset
-    ) -> Option<PHAXCurrencyId>;
-}
-
-pub struct XCurrencyIdConverter<NativeTokens>(PhantomData<NativeTokens>);
-impl<NativeTokens: Get<BTreeMap<Vec<u8>, MultiLocation>>> XCurrencyIdConversion
-    for XCurrencyIdConverter<NativeTokens>
-{
-    fn from_asset(
-        multi_asset: &MultiAsset
-    ) -> Option<PHAXCurrencyId> {
-        if let MultiAsset::ConcreteFungible { ref id, .. } = multi_asset {
-            if id == &MultiLocation::X1(Junction::Parent) {
-                let relaychain_currency: PHAXCurrencyId = PHAXCurrencyId {
-                    chain_id: ChainId::RelayChain,
-                    currency_id: b"DOT".to_vec(),
-                };
-                return Some(relaychain_currency);
-            }
-
-            if let Some(Junction::GeneralKey(key)) = id.last() {
-                if NativeTokens::get().contains_key(key) {
-                    // here we can trust the currency matchs the parachain, case NativePalletAssetOr already check this
-                    if let MultiLocation::X2(Junction::Parent, Junction::Parachain { id: paraid }) =
-                        NativeTokens::get().get(key).unwrap()
-                    {
-                        let parachain_currency: PHAXCurrencyId = PHAXCurrencyId {
-                            chain_id: ChainId::ParaChain((*paraid).into()),
-                            currency_id: key.clone(),
-                        };
-                        return Some(parachain_currency);
-                    }
-
-                    if let MultiLocation::X1(Junction::Parachain { id: paraid }) =
-                        NativeTokens::get().get(key).unwrap()
-                    {
-                        let parachain_currency: PHAXCurrencyId = PHAXCurrencyId {
-                            chain_id: ChainId::ParaChain((*paraid).into()),
-                            currency_id: key.clone(),
-                        };
-                        return Some(parachain_currency);
-                    }
-                }
-            }
-        }
-        None
-    }
-}
-
 pub struct ConcreteMatcher<T>(PhantomData<T>);
 impl<T: Get<MultiLocation>, B: TryFrom<u128>> MatchesFungible<B> for ConcreteMatcher<T> {
     fn matches_fungible(a: &MultiAsset) -> Option<B> {
@@ -261,25 +177,16 @@ impl<T: Get<MultiLocation>, B: TryFrom<u128>> MatchesFungible<B> for ConcreteMat
     }
 }
 
-pub struct AssetLocationFilter<NativeTokens>(PhantomData<NativeTokens>);
-impl<NativeTokens: Get<BTreeMap<Vec<u8>, MultiLocation>>> FilterAssetLocation
-    for AssetLocationFilter<NativeTokens>
+pub struct AnyLocationFilter;
+impl FilterAssetLocation for AnyLocationFilter
 {
     fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-        debug::info!("filter_asset_location, asset: {:?}, origin: {:?}", asset, origin);
+        debug::info!("filter_asset_location(asset: {:?}, origin: {:?})", asset, origin);
         if NativeAsset::filter_asset_location(asset, origin) {
+			debug::info!("return true because the asset is native");
             return true;
         }
-
-        // native asset identified by a general key
-        if let MultiAsset::ConcreteFungible { ref id, .. } = asset {
-            if let Some(Junction::GeneralKey(key)) = id.last() {
-                if NativeTokens::get().contains_key(key) {
-                    return (*origin) == *(NativeTokens::get().get(key).unwrap());
-                }
-            }
-        }
-
-        false
+		debug::info!("return true because we accept everything");
+        true
     }
 }

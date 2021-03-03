@@ -1,0 +1,22 @@
+[package]
+name = "parachain-utils"
+version = "0.1.0"
+authors = ["h4x3rotab <h4x3rotab@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+sp-std = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+# Cumulus dependencies
+cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
+# Polkadot dependencies
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
+
+[features]
+default = ["std"]
+std = [
+    "codec/std",
+    "sp-std/std",
+    "cumulus-primitives-core/std",
+    "xcm/std",
+]
