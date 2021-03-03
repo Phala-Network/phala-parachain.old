@@ -9,6 +9,7 @@ use sp_core::{crypto::Pair, sr25519, storage::StorageKey};
 use sp_finality_grandpa::{AuthorityList, SetId, VersionedAuthorityList, GRANDPA_AUTHORITIES_KEY};
 use sp_rpc::number::NumberOrHex;
 use subxt::{system::AccountStoreExt, EventsDecoder, Signer};
+use phala_types::pruntime::StorageProof;
 
 mod chain_client;
 mod error;
@@ -24,6 +25,7 @@ use crate::types::{
     BlockWithEvents, DispatchBlockReq, DispatchBlockResp, GenesisInfo, GetInfoReq,
     GetRuntimeInfoReq, Hash, Header, HeaderToSync, InitRespAttestation, InitRuntimeReq,
     InitRuntimeResp, NotifyReq, OpaqueSignedBlock, Runtime, SyncHeaderReq, SyncHeaderResp,
+	SyncParaHeaderReq, SyncParaHeaderResp,
 };
 
 use notify_client::NotifyClient;
@@ -325,6 +327,24 @@ async fn req_sync_header(
     Ok(resp)
 }
 
+async fn req_sync_para_header(
+	pr: &PrClient,
+	header: Vec<u8>,
+	header_proof: &StorageProof,
+	para_id: Vec<u8>,
+) -> Result<SyncParaHeaderResp, Error> {
+	let header_b64 = base64::encode(&header);
+	let header_proof_b64 = base64::encode(&Encode::encode(&header_proof));
+	let para_id_b64 = base64::encode(&para_id);
+	let req = SyncParaHeaderReq {
+		header_b64,
+		header_proof_b64,
+		para_id_b64,
+	};
+	let resp = pr.req_decode("sync_parachain_header", req).await?;
+	Ok(resp)
+}
+
 async fn req_dispatch_block<T>(pr: &PrClient, blocks: &T) -> Result<DispatchBlockResp, Error>
 where
     T: std::ops::Deref<Target = [BlockHeaderWithEvents]>,
@@ -407,7 +427,8 @@ async fn batch_sync_block(
     sync_state: &mut BlockSyncState,
     batch_window: usize,
     blocknumber: BlockNumber,
-    paraid_storage_key: StorageKey,
+	para_id: Vec<u8>,
+    para_head_storage_key: StorageKey,
 ) -> Result<usize, Error> {
     let block_buf = &mut sync_state.blocks;
 
@@ -503,17 +524,39 @@ async fn batch_sync_block(
         let r = req_sync_header(pr, &header_batch, authrotiy_change.as_ref()).await?;
         println!("  ..sync_header: {:?}", r);
 
+		let raw_header = match chain_client::get_storage(
+			&client,
+			Some(last_header_hash),
+			para_head_storage_key.clone())
+			.await? {
+				Some(head) => head,
+				None => {
+					return Err(Error::FailedToDecode);
+				}
+		};
+
         let para_fin_header_data = chain_client::get_parachain_heads(
-            &client,
-            Some(last_header_hash),
-            paraid_storage_key.clone(),
-        )
-        .await?;
+            raw_header.clone(),
+        )?;
+
         let para_fin_header =
             sp_runtime::generic::Header::<u128, sp_runtime::traits::BlakeTwo256>::decode(
                 &mut para_fin_header_data.expect("No head found").as_slice(),
             );
         if para_fin_header.is_ok() {
+			let header_proof = chain_client::read_proof(
+				&client,
+				Some(last_header_hash),
+				para_head_storage_key.clone(),
+			).await?;
+			let r = req_sync_para_header(
+				pr,
+				raw_header,
+				&header_proof,
+				para_id.clone(),
+			).await?;
+			println!("  ..req_sync_para_header: {:?}", r);
+
             let para_fin_hash = para_fin_header.unwrap().hash();
             let para_fin_block = paraclient.block(Some(para_fin_hash)).await?;
             if para_fin_block.is_some() {
@@ -832,9 +875,16 @@ async fn bridge(args: Args) -> Result<(), Error> {
         authory_set_state: None,
     };
 
-    let paraid_storage_key = chain_client::get_paraid_key(&paraclient)
-        .await
-        .expect("Failed to get paraid storage key");
+	let para_id = match chain_client::get_paraid(&paraclient)
+		.await?
+	{
+		Some(pid) => pid,
+		None => {
+			return Err(Error::FailedToDecode);
+		}
+	};
+    let para_head_storage_key = chain_client::get_para_head_key(para_id.clone())
+        .await;
 
     loop {
         // update the latest pRuntime state
@@ -916,7 +966,8 @@ async fn bridge(args: Args) -> Result<(), Error> {
             &mut sync_state,
             args.sync_blocks,
             info.blocknum,
-            paraid_storage_key.clone(),
+			para_id.clone(),
+            para_head_storage_key.clone(),
         )
         .await?;
 

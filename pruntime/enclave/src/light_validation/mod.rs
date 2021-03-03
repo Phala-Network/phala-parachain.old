@@ -36,7 +36,7 @@
 
 mod error;
 mod justification;
-mod storage_proof;
+pub mod storage_proof;
 mod types;
 
 use crate::std::collections::BTreeMap;
@@ -396,6 +396,16 @@ pub mod utils {
         bytes.extend(&sp_core::twox_128(storage.as_bytes())[..]);
         bytes
     }
+
+	/// Calculates the Substrate storage key prefix for a StorageMap
+	pub fn storage_map_prefix(module: &str, storage_item: &str, storage_item_key: &str) -> Vec<u8> {
+		let mut bytes = storage_prefix(module, storage_item);
+		let item_key = crate::hex::decode_hex(storage_item_key);
+		let hash = sp_core::twox_64(&item_key);
+		bytes.extend(&hash);
+		bytes.extend(&item_key);
+		bytes
+	}
 
     /// Gets the last 32 bytes as the account key (`storage_key` must be longer than that)
     pub fn extract_account_id_key_unsafe<'a>(storage_key: &'a [u8]) -> &'a [u8] {

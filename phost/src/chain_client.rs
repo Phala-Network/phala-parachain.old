@@ -142,32 +142,19 @@ pub fn check_round_end_event(
     Ok(false)
 }
 
-pub async fn get_paraid_key(paraclient: &XtClient) -> Option<StorageKey> {
-    let para_key = storage_value_key_vec("ParachainInfo", "ParachainId");
-    match get_storage(&paraclient, None, StorageKey(para_key))
-        .await
-        .unwrap()
-    {
-        Some(para_id) => {
-            let key = storage_map_key_vec("Paras", "Heads", &hex::encode(para_id));
-            Some(StorageKey(key))
-        }
-        None => None,
-    }
+pub async fn get_paraid(client: &XtClient) -> Result<Option<Vec<u8>>, Error> {
+	let para_key = storage_value_key_vec("ParachainInfo", "ParachainId");
+	get_storage(&client, None, StorageKey(para_key)).await
 }
 
-pub async fn get_parachain_heads(
-    client: &XtClient,
-    hash: Option<Hash>,
-    storage_key: StorageKey,
+pub async fn get_para_head_key(para_id: Vec<u8>) -> StorageKey {
+    StorageKey(storage_map_key_vec("Paras", "Heads", &hex::encode(para_id)))
+}
+
+pub fn get_parachain_heads(
+	head: Vec<u8>,
 ) -> Result<Option<Vec<u8>>, Error> {
-    let head = get_storage(&client, hash, storage_key).await?;
-    Ok(match head {
-        Some(data) => {
-            Some(Vec::<u8>::decode(&mut data.as_slice()).map_err(|_| Error::FailedToDecode)?)
-        }
-        None => None,
-    })
+	Ok(Some(Vec::<u8>::decode(&mut head.as_slice()).map_err(|_| Error::FailedToDecode)?))
 }
 
 // Storage functions
