@@ -247,16 +247,16 @@ impl Resp for SyncHeaderReq {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SyncParaHeaderReq {
-	pub header_b64: String,
-	pub header_proof_b64: String,
-	pub para_id_b64: String,
+    pub header_b64: String,
+    pub header_proof_b64: String,
+    pub para_id_b64: String,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SyncParaHeaderResp {
-	pub synced_parachain_header_to: BlockNumber,
+    pub synced_parachain_header_to: BlockNumber,
 }
 impl Resp for SyncParaHeaderReq {
-	type Resp = SyncParaHeaderResp;
+    type Resp = SyncParaHeaderResp;
 }
 
 #[derive(Clone, Debug)]
