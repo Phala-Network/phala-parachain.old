@@ -4546,6 +4546,7 @@ dependencies = [
  "pallet-balances",
  "pallet-randomness-collective-flip",
  "pallet-timestamp",
+ "parachain-utils",
  "parity-scale-codec",
  "phala-types",
  "rand 0.7.3",
@@ -4816,6 +4817,16 @@ dependencies = [
  "serde",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "parachain-utils"
+version = "0.1.0"
+dependencies = [
+ "cumulus-primitives-core",
+ "parity-scale-codec",
+ "sp-std",
+ "xcm",
 ]
 
 [[package]]
@@ -11057,6 +11068,7 @@ dependencies = [
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
+ "parachain-utils",
  "parity-scale-codec",
  "serde",
  "sp-core",

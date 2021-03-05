@@ -50,6 +50,7 @@ dependencies = [
  "substrate-fixed",
  "webpki 0.21.4",
  "webpki-roots",
+ "xcm",
  "xcm-transactor",
  "yasna",
 ]
@@ -1367,6 +1368,7 @@ dependencies = [
  "itertools",
  "pallet-balances",
  "pallet-randomness-collective-flip",
+ "parachain-utils",
  "parity-scale-codec",
  "phala-types",
  "serde",
@@ -1528,6 +1530,16 @@ dependencies = [
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",
+]
+
+[[package]]
+name = "parachain-utils"
+version = "0.1.0"
+dependencies = [
+ "cumulus-primitives-core",
+ "parity-scale-codec",
+ "sp-std",
+ "xcm",
 ]
 
 [[package]]
@@ -3275,6 +3287,7 @@ dependencies = [
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
+ "parachain-utils",
  "parity-scale-codec",
  "sp-core",
  "sp-io",

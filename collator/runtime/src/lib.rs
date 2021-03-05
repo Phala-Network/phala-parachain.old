@@ -44,10 +44,7 @@ use sp_runtime::{
 	ApplyExtrinsicResult,
 	FixedPointNumber,
 };
-use sp_std::{
-	collections::btree_map::BTreeMap,
-	prelude::*,
-};
+use sp_std::prelude::*;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
@@ -95,7 +92,7 @@ use xcm_builder::{
 use xcm_executor::{
 	Config, XcmExecutor,
 };
-use xcm_transactor::{AssetLocationFilter, ConcreteMatcher, XCurrencyIdConverter};
+use xcm_transactor::{AnyLocationFilter, ConcreteMatcher};
 
 pub type SessionHandlers = ();
 
@@ -521,7 +518,7 @@ impl Config for XcmConfig {
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = LocalOriginConverter;
 	//TODO: might need to add other assets based on orml-tokens
-	type IsReserve = AssetLocationFilter<NativeTokens>;
+	type IsReserve = AnyLocationFilter;
 	type IsTeleporter = ();
 	type LocationInverter = LocationInverter<Ancestry>;
 }
@@ -534,28 +531,10 @@ impl xcm_handler::Config for Runtime {
 	type AccountIdConverter = LocationConverter;
 }
 
-parameter_types! {
-	pub NativeTokens: BTreeMap<Vec<u8>, MultiLocation> = {
-		let mut t = BTreeMap::new();
-		t.insert("ACA".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 666 }));	// Acala
-		t.insert("AUSD".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 666 }));	// Acala
-		t.insert("XBTC".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 666 }));	// Acala
-		t.insert("LDOT".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 666 }));	// Acala
-		t.insert("PHA".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 30 }));	// Phala
-		t.insert("SDN".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 5000 }));	// Plasm
-		t.insert("PLM".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 5000 }));	// Plasm
-
-		t.insert("PHA2000".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 2000 }));	// test only
-		t.insert("PHA5000".into(), MultiLocation::X2(Junction::Parent, Junction::Parachain { id: 5000 }));	// test only
-		t
-	};
-}
-
 impl xcm_transactor::Config for Runtime {
 	type Event = Event;
 	type Matcher = ConcreteMatcher<Location>;
 	type AccountIdConverter = LocationConverter;
-	type XCurrencyIdConverter = XCurrencyIdConverter<NativeTokens>;
 	type OwnedCurrency = Balances;
 	type ParaId = ParachainInfo;
 }

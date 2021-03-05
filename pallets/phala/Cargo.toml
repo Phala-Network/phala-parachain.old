@@ -20,7 +20,9 @@ sp-std = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1"
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, optional = true }
+
 phala-types = { path = "../../common/types", default-features = false }
+parachain-utils = { path = "../../common/parachain_utils", default-features = false }
 
 pallet-randomness-collective-flip = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }

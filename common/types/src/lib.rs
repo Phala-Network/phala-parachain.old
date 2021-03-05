@@ -11,9 +11,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "pruntime")]
 pub mod pruntime;
 
-use xcm::v0::{NetworkId};
+use xcm::v0::NetworkId;
 use cumulus_primitives_core::{ParaId};
-pub use xcm_transactor::{ PHAXCurrencyId as XCurrencyId, ChainId};
 
 #[derive(Encode, Decode)]
 pub struct Transfer<AccountId, Balance> {
@@ -42,9 +41,9 @@ pub struct TransferTokenData<AccountId, Balance> {
 	pub signature: Vec<u8>,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone, Debug)]
 pub struct TransferXToken<AccountId, Balance> {
-	pub x_currency_id: XCurrencyId,
+	pub currency_id: Vec<u8>,
 	pub para_id: ParaId,
 	pub dest_network: NetworkId,
 	pub dest: AccountId,
@@ -52,7 +51,7 @@ pub struct TransferXToken<AccountId, Balance> {
 	pub sequence: u64,
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone, Debug)]
 pub struct TransferXTokenData<AccountId, Balance> {
 	pub data: TransferXToken<AccountId, Balance>,
 	pub signature: Vec<u8>,

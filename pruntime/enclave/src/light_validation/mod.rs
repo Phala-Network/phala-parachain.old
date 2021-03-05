@@ -47,7 +47,6 @@ use error::JustificationError;
 use justification::GrandpaJustification;
 use storage_proof::{StorageProof, StorageProofChecker};
 
-use core::iter::FromIterator;
 use finality_grandpa::voter_set::VoterSet;
 use num::AsPrimitive;
 use parity_scale_codec::{Decode, Encode};

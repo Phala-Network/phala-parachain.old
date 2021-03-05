@@ -117,9 +117,8 @@ impl System {
                         length: pending_msgs.len(),
                         encoded_egreee_b64: base64::encode(&pending_msgs.encode()),
                     })
-                }
-                // If we add more unhandled queries:
-                //   _ => Err(Error::Other("Unknown command".to_string()))
+                } // If we add more unhandled queries:
+                  //   _ => Err(Error::Other("Unknown command".to_string()))
             }
         };
         match inner() {

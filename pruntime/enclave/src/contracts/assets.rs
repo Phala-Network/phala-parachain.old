@@ -58,12 +58,6 @@ pub enum ChainId {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
-pub struct XCurrencyId {
-    pub chain_id: ChainId,
-    pub currency_id: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
 pub enum NetworkId {
     Any,
     Named(Vec<u8>),
@@ -71,23 +65,10 @@ pub enum NetworkId {
     Kusama,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
-pub struct TransferXToken {
-    x_currency_id: XCurrencyId,
-    para_id: ParaId,
-    dest_network: NetworkId,
-    dest: AccountIdWrapper,
-    amount: chain::Balance,
-    sequence: SequenceType,
-}
+pub type TransferXToken = phala_types::TransferXToken<AccountIdWrapper, chain::Balance>;
+pub type TransferXTokenData = phala_types::TransferXTokenData<AccountIdWrapper, chain::Balance>;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
-pub struct TransferXTokenData {
-    data: TransferXToken,
-    signature: Vec<u8>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Encode, Decode)]
+#[derive(Debug, Clone, Encode, Decode)]
 pub enum TxQueue {
     TransferTokenData(TransferTokenData),
     TransferXTokenData(TransferXTokenData),
@@ -100,6 +81,7 @@ pub struct Assets {
     metadata: BTreeMap<AssetId, AssetMetadata>,
     history: BTreeMap<AccountIdWrapper, Vec<AssetsTx>>,
     sequence: SequenceType,
+    #[serde(with = "super::serde_scale")]
     queue: Vec<TxQueue>,
     #[serde(skip)]
     pair: Option<ecdsa::Pair>,
@@ -145,7 +127,7 @@ pub enum Command {
         value: chain::Balance,
     },
     TransferXTokenToChain {
-        x_currency_id: XCurrencyId,
+        currency_id: Vec<u8>,
         para_id: ParaId,
         dest_network: NetworkId,
         dest: AccountIdWrapper,
@@ -427,7 +409,7 @@ impl contracts::Contract<Command, Request, Response> for Assets {
                 }
             }
             Command::TransferXTokenToChain {
-                x_currency_id,
+                currency_id,
                 para_id,
                 dest_network,
                 dest,
@@ -438,17 +420,11 @@ impl contracts::Contract<Command, Request, Response> for Assets {
                     "Transfer xtoken to chain: [{}] -> [{}]: {:?}, {}",
                     o.to_string(),
                     dest.to_string(),
-                    x_currency_id,
+                    currency_id,
                     value
                 );
-                //TODO:
-                let token_id = [
-                    ChainId::encode(&x_currency_id.chain_id),
-                    x_currency_id.currency_id.clone(),
-                ]
-                .concat();
-
-                if let Some(metadatum) = self.metadata.get_mut(&token_id) {
+                let token_id = &currency_id;
+                if let Some(metadatum) = self.metadata.get_mut(token_id) {
                     let accounts = self.assets.get_mut(&metadatum.id).unwrap();
                     println!(
                         "Transfer xtoken to chain: [{}] -> [{}]: {:?}, {}",
@@ -466,17 +442,14 @@ impl contracts::Contract<Command, Request, Response> for Assets {
 
                             let src0 = *src_amount;
                             *src_amount -= value;
-
                             metadatum.total_supply -= value;
-
                             println!("   src: {:>20} -> {:>20}", src0, src0 - value);
 
                             let sequence = self.sequence + 1;
-
                             let data = TransferXToken {
-                                x_currency_id,
-                                para_id,
-                                dest_network,
+                                currency_id,
+                                para_id: para_id.into(),
+                                dest_network: xcm::v0::NetworkId::Any,
                                 dest,
                                 amount: value,
                                 sequence,
