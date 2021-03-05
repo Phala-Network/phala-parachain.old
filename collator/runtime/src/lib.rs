@@ -51,7 +51,7 @@ use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-	construct_runtime, parameter_types, debug, RuntimeDebug,
+	construct_runtime, parameter_types, RuntimeDebug,
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,

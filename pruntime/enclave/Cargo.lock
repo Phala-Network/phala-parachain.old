@@ -1643,6 +1643,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
+ "log 0.4.14",
  "native-nostd-hasher",
  "pallet-balances",
  "pallet-bounties",
