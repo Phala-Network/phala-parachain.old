@@ -1249,6 +1249,7 @@ version = "2.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "log 0.4.14",
  "pallet-balances",
  "parity-scale-codec",
  "rustc-hex",
@@ -1331,6 +1332,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "itertools",
+ "log 0.4.14",
  "pallet-balances",
  "pallet-phala",
  "parity-scale-codec",
