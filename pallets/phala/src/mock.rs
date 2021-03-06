@@ -115,6 +115,9 @@ impl phala::Config for Test {
 	type ComputeRewardPercentage = ComputeRewardPercentage;
 	type OfflineOffenseSlash = OfflineOffenseSlash;
 	type OfflineReportReward = OfflineReportReward;
+
+	type XcmExecutor = ();
+	type AccountIdConverter = ();
 }
 
 // This function basically just builds a genesis storage key/value store according to

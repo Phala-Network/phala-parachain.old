@@ -116,6 +116,9 @@ impl pallet_phala::Config for Test {
 	type ComputeRewardPercentage = ComputeRewardPercentage;
 	type OfflineOffenseSlash = OfflineOffenseSlash;
 	type OfflineReportReward = OfflineReportReward;
+
+	type XcmExecutor = ();
+	type AccountIdConverter = ();
 }
 
 impl mining_staking::Config for Test {
