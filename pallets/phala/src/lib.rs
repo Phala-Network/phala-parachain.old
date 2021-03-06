@@ -331,6 +331,8 @@ decl_error! {
 		ReportedWorkerNotMining,
 		/// The report has an invalid proof
 		InvalidProof,
+		/// Failed to send XCM
+		FailedToSendXCM,
 	}
 }
 
@@ -655,13 +657,12 @@ decl_module! {
 			// build crosschain transfer XCM message
 			let xcm = Self::build_xtoken_transfering_xcm(
 				&transfer_data.data.currency_id,
-				transfer_data.data.para_id,
+				Some(transfer_data.data.para_id),
 				transfer_data.data.dest.clone(),
 				transfer_data.data.dest_network,
 				transfer_data.data.amount
 			).unwrap();
-			let xcm_origin =
-			T::AccountIdConverter::try_into_location(who.clone()).map_err(|_| Error::<T>::BadXCMLocation)?;
+			let xcm_origin = T::AccountIdConverter::try_into_location(who.clone()).map_err(|_| Error::<T>::BadXCMLocation)?;
 			match T::XcmExecutor::execute_xcm(xcm_origin, xcm) {
 				Ok(_) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
 				Err(_err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
@@ -671,6 +672,26 @@ decl_module! {
 			IngressSequence::insert(CONTRACT_ID, sequence + 1);
 
 			Ok(())
+		}
+
+		#[weight = 0]
+		fn force_hrmp_withdraw(
+			origin, currency_id: Vec<u8>, dest: T::AccountId, amount: BalanceOf<T>
+		) -> dispatch::DispatchResult {
+			ensure_root(origin)?;
+			let xcm = Self::build_xtoken_transfering_xcm(
+				&currency_id,
+				None,
+				dest.clone(),
+				NetworkId::Any,
+				amount
+			).unwrap();
+			let xcm_origin = T::AccountIdConverter::try_into_location(dest)
+				.map_err(|_| Error::<T>::BadXCMLocation)?;
+			match T::XcmExecutor::execute_xcm(xcm_origin, xcm) {
+				Ok(()) => Ok(()),
+				Err(_) => Err(Error::<T>::FailedToSendXCM.into())
+			}
 		}
 
 		// Messaging
@@ -1443,7 +1464,7 @@ impl<T: Config> Module<T> where T::AccountId: Into<[u8; 32]> {
 
 	fn build_xtoken_transfering_xcm(
 		currency_id: &Vec<u8>,
-		dest_paraid: ParaId,
+		dest_paraid: Option<ParaId>,
 		dest_account: T::AccountId,
 		dest_network: NetworkId,
 		amount: BalanceOf<T>
@@ -1458,8 +1479,10 @@ impl<T: Config> Module<T> where T::AccountId: Into<[u8; 32]> {
 		match parachain_utils::AssetLocation::try_from(&location)
 			.expect("Error while matching asset location; qed.") {
 			AssetLocation::Parachain(reserve_chain) => {
-				if ParaId::from(reserve_chain) != dest_paraid {
-					panic!("Must transfer back to the reserve chain; qed.");
+				if let Some(dest_paraid) = dest_paraid {
+					if ParaId::from(reserve_chain) != dest_paraid {
+						panic!("Must transfer back to the reserve chain; qed.");
+					}
 				}
 				Some(Xcm::WithdrawAsset {
 					assets: vec![MultiAsset::ConcreteFungible {
