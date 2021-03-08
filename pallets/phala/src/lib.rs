@@ -1486,7 +1486,7 @@ impl<T: Config> Module<T> {
 						.into(),
 						effects: vec![Order::DepositAsset {
 							assets: vec![MultiAsset::All],
-							dest: dest,
+							dest,
 						}],
 					}],
 				})
