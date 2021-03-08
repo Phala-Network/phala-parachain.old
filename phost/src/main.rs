@@ -327,6 +327,10 @@ async fn req_sync_header(
     Ok(resp)
 }
 
+/// Syncs the parachain header got from Para.Header
+///
+/// This function must be called right after synchronized a batch of relay chain block header, and
+/// the storage proof must be subject to the state_root of the latest accepted relay chain block.
 async fn req_sync_para_header(
     pr: &PrClient,
     header: Vec<u8>,
@@ -524,16 +528,12 @@ async fn batch_sync_block(
         let r = req_sync_header(pr, &header_batch, authrotiy_change.as_ref()).await?;
         println!("  ..sync_header: {:?}", r);
 
-        let raw_header = match chain_client::get_storage(
+        let raw_header = chain_client::get_storage(
             &client,
             Some(last_header_hash),
             para_head_storage_key.clone())
-            .await? {
-            Some(head) => head,
-            None => {
-                return Err(Error::FailedToDecode);
-            }
-        };
+            .await?
+            .ok_or(Error::EmptyParaHead)?;
 
         let para_fin_header_data = chain_client::get_parachain_heads(
             raw_header.clone(),
@@ -875,16 +875,11 @@ async fn bridge(args: Args) -> Result<(), Error> {
         authory_set_state: None,
     };
 
-    let para_id = match chain_client::get_paraid(&paraclient)
+    let para_id = chain_client::get_paraid(&paraclient)
         .await?
-    {
-        Some(pid) => pid,
-        None => {
-            return Err(Error::FailedToDecode);
-        }
-    };
-    let para_head_storage_key = chain_client::get_para_head_key(para_id.clone())
-        .await;
+        .ok_or(Error::EmptyParaId)?;
+
+    let para_head_storage_key = chain_client::get_para_head_key(&para_id).await;
 
     loop {
         // update the latest pRuntime state

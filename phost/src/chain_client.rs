@@ -147,7 +147,7 @@ pub async fn get_paraid(client: &XtClient) -> Result<Option<Vec<u8>>, Error> {
     get_storage(&client, None, StorageKey(para_key)).await
 }
 
-pub async fn get_para_head_key(para_id: Vec<u8>) -> StorageKey {
+pub async fn get_para_head_key(para_id: &Vec<u8>) -> StorageKey {
     StorageKey(storage_map_key_vec("Paras", "Heads", &hex::encode(para_id)))
 }
 
