@@ -276,6 +276,7 @@ decl_error! {
 		MinerNotFound,
 		BadMachineId,
 		BadXCMLocation,
+		FailedToBuildXCM,
 		InvalidPubKey,
 		InvalidSignature,
 		InvalidSignatureBadLen,
@@ -1455,6 +1456,17 @@ impl<T: Config> Module<T> {
 		let location = parachain_utils::from_encoded_asset_id(&currency_id)
 			.expect("Error while decoding currency_id; qed.");
 
+		let encoded_account = Encode::encode(&dest_account);
+		let dest = if encoded_account.len() == 32 {
+			Junction::AccountId32 {
+				network: dest_network,
+				id: encoded_account.try_into().map_err(|_| Error::<T>::FailedToBuildXCM).ok()?,
+			}
+			.into()
+		} else {
+			Junction::GeneralKey(encoded_account).into()
+		};
+
 		match parachain_utils::AssetLocation::try_from(&location)
 			.expect("Error while matching asset location; qed.") {
 			AssetLocation::Parachain(reserve_chain) => {
@@ -1474,11 +1486,7 @@ impl<T: Config> Module<T> {
 						.into(),
 						effects: vec![Order::DepositAsset {
 							assets: vec![MultiAsset::All],
-							dest: Junction::AccountId32 {
-								network: dest_network,
-								id: Encode::encode(&dest_account).try_into().unwrap(),
-							}
-							.into(),
+							dest: dest,
 						}],
 					}],
 				})
