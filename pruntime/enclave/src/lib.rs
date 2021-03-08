@@ -171,6 +171,8 @@ struct LocalState {
     machine_id: [u8; 16],
     dev_mode: bool,
     runtime_info: Option<InitRuntimeResp>,
+    last_relaychain_header: Option<HeaderToSync>,
+    last_parachain_header: Option<chain::Header>,
 }
 
 fn se_to_b64<S>(value: &ChainLightValidation, serializer: S) -> Result<S::Ok, S::Error>
@@ -243,6 +245,8 @@ lazy_static! {
                 machine_id: [0; 16],
                 dev_mode: false,
                 runtime_info: None,
+                last_relaychain_header: None,
+                last_parachain_header: None,
             }
         )
     };
@@ -642,6 +646,7 @@ const ACTION_DISPATCH_BLOCK: u8 = 7;
 const ACTION_GET_RUNTIME_INFO: u8 = 10;
 const ACTION_SET: u8 = 21;
 const ACTION_GET: u8 = 22;
+const ACTION_SYNC_PARACHAIN_HEADER: u8 = 13;
 
 #[no_mangle]
 pub extern "C" fn ecall_set_state(input_ptr: *const u8, input_len: usize) -> sgx_status_t {
@@ -675,6 +680,7 @@ pub extern "C" fn ecall_handle(
         ACTION_TEST => test(load_param(input_value)),
         ACTION_QUERY => query(load_param(input_value)),
         ACTION_SYNC_HEADER => sync_header(load_param(input_value)),
+        ACTION_SYNC_PARACHAIN_HEADER => sync_parachain_header(load_param(input_value)),
         ACTION_DISPATCH_BLOCK => dispatch_block(load_param(input_value)),
         _ => {
             let payload = input_value.as_object().unwrap();
@@ -1209,7 +1215,7 @@ fn sync_header(input: SyncHeaderReq) -> Result<Value, Value> {
         .collect();
     let headers = parsed_headers.map_err(|_| error_msg("Invalid header"))?;
     // Light validation when possible
-    let last_header = &headers
+    let last_header = headers
         .last()
         .ok_or_else(|| error_msg("No header in the request"))?;
     {
@@ -1252,7 +1258,7 @@ fn sync_header(input: SyncHeaderReq) -> Result<Value, Value> {
     }
     // Passed the validation
     let mut local_state = LOCAL_STATE.lock().unwrap();
-    let mut last_header = 0;
+    let mut last_header_number = 0;
     for header_with_events in headers.iter() {
         let header = &header_with_events.header;
         if header.number != local_state.headernum {
@@ -1260,11 +1266,51 @@ fn sync_header(input: SyncHeaderReq) -> Result<Value, Value> {
         }
 
         // move forward
-        last_header = header.number;
-        local_state.headernum = last_header + 1;
+        last_header_number = header.number;
+        local_state.headernum = last_header_number + 1;
     }
 
-    Ok(json!({ "synced_to": last_header }))
+    local_state.last_relaychain_header = Some(last_header.clone());
+
+    Ok(json!({ "synced_to": last_header_number }))
+}
+
+fn sync_parachain_header(input: SyncParaHeaderReq) -> Result<Value, Value> {
+    let ref mut state = STATE.lock().unwrap();
+
+    let raw_header_data: Vec<u8> = base64::decode(&input.header_b64)
+        .expect("Failed to parse base64 header");
+    let header_data: Vec<u8> = Vec::<u8>::decode(&mut raw_header_data.as_slice())
+        .expect("Failed to decode header data");
+    let header = chain::Header::decode(&mut header_data.as_slice())
+        .expect("Failed to decode header");
+    let header_proof_data = base64::decode(&input.header_proof_b64)
+        .expect("Failed to parse base64 header proof");
+    let header_proof:light_validation::storage_proof::StorageProof =
+        Decode::decode(&mut &header_proof_data[..])
+            .expect("Failed to decode header proof");
+    let para_id = base64::decode(&input.para_id_b64)
+        .expect("Failed to parse base64 parachain id");
+    let storage_key = light_validation::utils::storage_map_prefix(
+        "Paras",
+        "Heads",
+        &hex::encode_hex_compact(&para_id)
+    );
+    let mut local_state = LOCAL_STATE.lock().unwrap();
+    let state_root = local_state.last_relaychain_header.as_ref().unwrap().header.state_root;
+
+    state
+        .light_client
+        .validate_storage_proof(
+            state_root,
+            header_proof,
+            &[(storage_key.as_slice(), raw_header_data.as_slice())],
+        )
+        .map_err(|_| error_msg("Bad storage proof for parachain header"))?;
+
+    local_state.last_parachain_header = Some(header.clone());
+
+    Ok(json!({ "synced_parachain_header_to": header.number }))
 }
 
 fn dispatch_block(input: DispatchBlockReq) -> Result<Value, Value> {
@@ -1292,6 +1338,12 @@ fn dispatch_block(input: DispatchBlockReq) -> Result<Value, Value> {
     if last_block.block_header.number >= local_state.headernum {
         return Err(error_msg("Unsynced block"));
     }
+    // We require the last block of each `dispatch_block` request must match the latest
+    // Para.Heads we got from relay chain
+    let last_parachain_header_hash = local_state.last_parachain_header.as_ref().unwrap().hash();
+    if last_block.block_header.hash() != last_parachain_header_hash {
+        return Err(error_msg("Bad block header"));
+    }
 
     let ecdh_privkey = ecdh::clone_key(
         local_state
@@ -1300,7 +1352,7 @@ fn dispatch_block(input: DispatchBlockReq) -> Result<Value, Value> {
             .expect("ECDH not initizlied"),
     );
     // TODO: validate block inclusion (#9)
-    let mut last_block = 0;
+    let mut last_block_number = 0;
     let mut current_bn = first_block.block_header.number - 1;
     for block in blocks.iter() {
         current_bn = current_bn + 1;
@@ -1314,11 +1366,11 @@ fn dispatch_block(input: DispatchBlockReq) -> Result<Value, Value> {
 
         handle_events(&block, &ecdh_privkey, local_state.dev_mode)?;
 
-        last_block = block.block_header.number;
-        local_state.blocknum = last_block + 1;
+        last_block_number = block.block_header.number;
+        local_state.blocknum = last_block_number + 1;
     }
 
-    Ok(json!({ "dispatched_to": last_block }))
+    Ok(json!({ "dispatched_to": last_block_number }))
 }
 
 fn parse_authority_set_change(data_b64: String) -> Result<AuthoritySetChange, Value> {

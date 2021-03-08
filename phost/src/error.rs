@@ -15,6 +15,8 @@ pub enum Error {
     FailedToCallRegisterWorker,
     FailedToCallResetWorker,
     ComputeWorkerNotEnabled,
+    EmptyParaId,
+    EmptyParaHead,
 }
 
 impl From<hyper::error::Error> for Error {

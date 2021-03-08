@@ -209,6 +209,20 @@ impl Resp for SyncHeaderReq {
     type Resp = SyncHeaderResp;
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SyncParaHeaderReq {
+    pub header_b64: String,
+    pub header_proof_b64: String,
+    pub para_id_b64: String,
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SyncParaHeaderResp {
+    pub synced_parachain_header_to: BlockNumber,
+}
+impl Resp for SyncParaHeaderReq {
+    type Resp = SyncParaHeaderResp;
+}
+
 #[derive(Clone, Debug)]
 pub struct BlockWithEvents {
     pub block: OpaqueSignedBlock,
