@@ -2,13 +2,13 @@
 extern crate alloc;
 use sp_core::U256;
 use sp_std::prelude::*;
-use sp_std::{cmp, vec};
+use sp_std::{cmp, vec, convert::TryInto};
 
 use frame_support::{fail, decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
 use frame_system::{ensure_root, ensure_signed, Module as System};
 
 use alloc::{vec::Vec, borrow::ToOwned};
-use codec::Decode;
+use codec::{Encode, Decode};
 use frame_support::{
 	traits::{
 		Currency, ExistenceRequirement::AllowDeath, Get, Imbalance, OnUnbalanced, Randomness,
@@ -93,7 +93,7 @@ pub trait Config: frame_system::Config {
 }
 
 decl_storage! {
-	trait Store for Module<T: Config> as PhalaModule where T::AccountId: Into<[u8; 32]> {
+	trait Store for Module<T: Config> as PhalaModule {
 		// Messaging
 		/// Number of all commands
 		CommandNumber get(fn command_number): Option<u64>;
@@ -265,7 +265,7 @@ decl_event!(
 
 // Errors inform users that something went wrong.
 decl_error! {
-	pub enum Error for Module<T: Config> where T::AccountId: Into<[u8; 32]> {
+	pub enum Error for Module<T: Config> {
 		InvalidIASSigningCert,
 		InvalidIASReportSignature,
 		InvalidQuoteStatus,
@@ -276,6 +276,7 @@ decl_error! {
 		MinerNotFound,
 		BadMachineId,
 		BadXCMLocation,
+		FailedToBuildXCM,
 		InvalidPubKey,
 		InvalidSignature,
 		InvalidSignatureBadLen,
@@ -338,7 +339,7 @@ decl_error! {
 // These functions materialize as "extrinsics", which are often compared to transactions.
 // Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 decl_module! {
-	pub struct Module<T: Config> for enum Call where origin: T::Origin, T::AccountId: Into<[u8; 32]> {
+	pub struct Module<T: Config> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
 		fn deposit_event() = default;
 
@@ -849,7 +850,7 @@ decl_module! {
 	}
 }
 
-impl<T: Config> Module<T> where T::AccountId: Into<[u8; 32]> {
+impl<T: Config> Module<T> {
 	pub fn account_id() -> T::AccountId {
 		PALLET_ID.into_account()
 	}
@@ -1455,6 +1456,17 @@ impl<T: Config> Module<T> where T::AccountId: Into<[u8; 32]> {
 		let location = parachain_utils::from_encoded_asset_id(&currency_id)
 			.expect("Error while decoding currency_id; qed.");
 
+		let encoded_account = Encode::encode(&dest_account);
+		let dest = if encoded_account.len() == 32 {
+			Junction::AccountId32 {
+				network: dest_network,
+				id: encoded_account.try_into().map_err(|_| Error::<T>::FailedToBuildXCM).ok()?,
+			}
+			.into()
+		} else {
+			Junction::GeneralKey(encoded_account).into()
+		};
+
 		match parachain_utils::AssetLocation::try_from(&location)
 			.expect("Error while matching asset location; qed.") {
 			AssetLocation::Parachain(reserve_chain) => {
@@ -1474,11 +1486,7 @@ impl<T: Config> Module<T> where T::AccountId: Into<[u8; 32]> {
 						.into(),
 						effects: vec![Order::DepositAsset {
 							assets: vec![MultiAsset::All],
-							dest: Junction::AccountId32 {
-								network: dest_network,
-								id: dest_account.into(),
-							}
-							.into(),
+							dest,
 						}],
 					}],
 				})
