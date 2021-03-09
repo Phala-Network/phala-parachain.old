@@ -59,6 +59,7 @@ native-nostd-hasher = { path = "../../vendor/native-nostd-hasher", optional = tr
 # Cumulus dependencies
 cumulus-pallet-parachain-system = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
+cumulus-pallet-xcm-handler = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1", default-features = false }
 
 # Polkadot dependencies
 polkadot-parachain = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
@@ -66,7 +67,6 @@ xcm = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", de
 xcm-builder = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
 xcm-executor = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
 
-xcm-handler = { path = "../pallets/xcm-handler", default-features = false }
 xcm-transactor = { path = "../pallets/xcm-transactor", default-features = false }
 
 [build-dependencies]
@@ -107,13 +107,13 @@ std = [
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"parachain-info/std",
 	"parachain-primitives/std",
-	"cumulus-pallet-parachain-system/std",
 	"cumulus-primitives-core/std",
+	"cumulus-pallet-xcm-handler/std",
+	"cumulus-pallet-parachain-system/std",
 	"polkadot-parachain/std",
 	"xcm/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
-	"xcm-handler/std",
 	"xcm-transactor/std",
 	"pallet-collective/std",
 	"pallet-treasury/std",

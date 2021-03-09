@@ -490,7 +490,7 @@ impl parachain_info::Config for Runtime {}
 parameter_types! {
 	pub const Location: MultiLocation = MultiLocation::X1(Junction::Parent);
 	pub Network: NetworkId = NetworkId::Named("phala".into());
-	pub RelayChainOrigin: Origin = xcm_handler::Origin::Relay.into();
+	pub RelayChainOrigin: Origin = cumulus_pallet_xcm_handler::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Junction::Parachain {
 		id: ParachainInfo::parachain_id().into()
 	}.into();
@@ -507,7 +507,7 @@ pub type LocalAssetTransactor = PhalaXcmTransactor;
 pub type LocalOriginConverter = (
 	SovereignSignedViaLocation<LocationConverter, Origin>,
 	RelayChainAsNative<RelayChainOrigin, Origin>,
-	SiblingParachainAsNative<xcm_handler::Origin, Origin>,
+	SiblingParachainAsNative<cumulus_pallet_xcm_handler::Origin, Origin>,
 	SignedAccountId32AsNative<Network, Origin>,
 );
 
@@ -523,12 +523,11 @@ impl Config for XcmConfig {
 	type LocationInverter = LocationInverter<Ancestry>;
 }
 
-impl xcm_handler::Config for Runtime {
+impl cumulus_pallet_xcm_handler::Config for Runtime {
 	type Event = Event;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type UpwardMessageSender = ParachainSystem;
 	type HrmpMessageSender = ParachainSystem;
-	type AccountIdConverter = LocationConverter;
 }
 
 impl xcm_transactor::Config for Runtime {
@@ -757,7 +756,7 @@ construct_runtime! {
 		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		ParachainInfo: parachain_info::{Module, Storage, Config},
-		XcmHandler: xcm_handler::{Module, Event<T>, Origin, Call},
+		XcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin, Call},
 		PhalaXcmTransactor: xcm_transactor::{Module, Call, Event<T>},
 		Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
 		Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
