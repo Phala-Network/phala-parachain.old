@@ -195,40 +195,40 @@ fn testnet_genesis(
 	let dev_ecdsa_pubkey: Vec<u8> = hex!["0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"].to_vec();
 
 	parachain_runtime::GenesisConfig {
-		frame_system: Some(parachain_runtime::SystemConfig {
+		frame_system: parachain_runtime::SystemConfig {
 			code: parachain_runtime::WASM_BINARY
 				.expect("WASM binary was not build, please build it!")
 				.to_vec(),
 			changes_trie_config: Default::default(),
-		}),
-		pallet_balances: Some(parachain_runtime::BalancesConfig {
+		},
+		pallet_balances: parachain_runtime::BalancesConfig {
 			balances: endowed_accounts
 				.iter()
 				.cloned()
 				.map(|k| (k, 1 << 60))
 				.collect(),
-		}),
-		pallet_sudo: Some(parachain_runtime::SudoConfig { key: root_key }),
-		parachain_info: Some(parachain_runtime::ParachainInfoConfig { parachain_id: id }),
-		pallet_collective_Instance1: Some(parachain_runtime::CouncilConfig::default()),
-		pallet_collective_Instance2: Some(parachain_runtime::TechnicalCommitteeConfig {
+		},
+		pallet_sudo: parachain_runtime::SudoConfig { key: root_key },
+		parachain_info: parachain_runtime::ParachainInfoConfig { parachain_id: id },
+		pallet_collective_Instance1: parachain_runtime::CouncilConfig::default(),
+		pallet_collective_Instance2: parachain_runtime::TechnicalCommitteeConfig {
 			members: endowed_accounts.iter()
 				.take((endowed_accounts.len() + 1) / 2)
 				.cloned()
 				.collect(),
 			phantom: Default::default(),
-		}),
-		pallet_membership_Instance1: Some(Default::default()),
-		pallet_treasury: Some(Default::default()),
-		pallet_vesting: Some(Default::default()),
-		pallet_democracy: Some(parachain_runtime::DemocracyConfig::default()),
-		pallet_phala: Some(parachain_runtime::PhalaModuleConfig {
+		},
+		pallet_membership_Instance1: Default::default(),
+		pallet_treasury: Default::default(),
+		pallet_vesting: Default::default(),
+		pallet_democracy: parachain_runtime::DemocracyConfig::default(),
+		pallet_phala: parachain_runtime::PhalaModuleConfig {
 			stakers: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.1.clone(), dev_ecdsa_pubkey.clone())
 			}).collect(),
 			// Now we have 4 contracts but reserve 10 for convenience
 			contract_keys: std::iter::repeat(dev_ecdsa_pubkey).take(10).collect(),
-		}),
+		},
 	}
 }
 

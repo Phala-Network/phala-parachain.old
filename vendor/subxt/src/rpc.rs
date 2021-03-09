@@ -90,7 +90,7 @@ use crate::{
 };
 
 pub type ChainBlock<T> =
-    SignedBlock<Block<<T as System>::Header, <T as System>::Extrinsic>>;
+SignedBlock<Block<<T as System>::Header, <T as System>::Extrinsic>>;
 
 /// Wrapper for NumberOrHex to allow custom From impls
 #[derive(Serialize)]
@@ -171,7 +171,7 @@ pub enum RpcClient {
 }
 
 impl RpcClient {
-    /// Request
+    /// Start a JSON-RPC request.
     pub async fn request<T: DeserializeOwned>(
         &self,
         method: &str,
@@ -187,7 +187,7 @@ impl RpcClient {
         }
     }
 
-    /// Subscribe
+    /// Start a JSON-RPC Subscription.
     pub async fn subscribe<T: DeserializeOwned>(
         &self,
         subscribe_method: &str,
@@ -205,7 +205,7 @@ impl RpcClient {
                 Err(RpcError::Custom(
                     "Subscriptions not supported on HTTP transport".to_owned(),
                 )
-                .into())
+                    .into())
             }
             #[cfg(any(feature = "client", test))]
             Self::Subxt(inner) => {
@@ -254,8 +254,7 @@ pub struct ReadProof<Hash> {
 
 /// Client for substrate rpc interfaces
 pub struct Rpc<T: Runtime> {
-    /// Client
-    pub client: RpcClient,
+    client: RpcClient,
     marker: PhantomData<T>,
 }
 

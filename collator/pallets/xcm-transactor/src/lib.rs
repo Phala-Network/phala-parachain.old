@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
-    debug, decl_event, decl_module, decl_storage,
+    decl_event, decl_module, decl_storage,
     traits::{Currency, ExistenceRequirement, Get, WithdrawReasons},
 };
 
@@ -76,23 +76,23 @@ where
     T: Config
 {
     fn deposit_asset(asset: &MultiAsset, location: &MultiLocation) -> Result {
-        debug::info!("----------------------- xcm-transactor: trying deposit -------------------------");
-        debug::info!(
+        log::info!("----------------------- xcm-transactor: trying deposit -------------------------");
+        log::info!(
             ">>> asset: {:?}, location: {:?}",
             asset,
             location
         );
 
 		let who = T::AccountIdConverter::from_location(location).ok_or(())?;
-		debug::info!("who: {:?}", who);
+		log::info!("who: {:?}", who);
 		let currency_id = utils::to_encoded_asset_id(asset).or(Err(Error::FailedToDecode))?;
-		debug::info!("currency_id: {:?}", currency_id);
+		log::info!("currency_id: {:?}", currency_id);
 		let amount: BalanceOf<T> = T::Matcher::matches_fungible(&asset)
 			.ok_or(())?
 			.saturated_into();
-		debug::info!("amount: {:?}", amount);
+		log::info!("amount: {:?}", amount);
 		let balance_amount = amount.try_into().map_err(|_| ())?;
-		debug::info!("balance amount: {:?}", balance_amount);
+		log::info!("balance amount: {:?}", balance_amount);
 
 		let mut is_owned_currency = false;
 		if let Ok(utils::AssetLocation::Parachain(paraid)) = utils::try_extract_asset_location(asset) {
@@ -108,7 +108,7 @@ where
 			balance_amount,
 			!is_owned_currency,
 		));
-		debug::info!("------------------ xcm-transactor: success deposit ------------------------------");
+		log::info!("------------------ xcm-transactor: success deposit ------------------------------");
 
         Ok(())
     }
@@ -117,23 +117,23 @@ where
 		asset: &MultiAsset,
 		location: &MultiLocation,
     ) -> result::Result<MultiAsset, Error> {
-        debug::info!("--------------------- xdm-adapter: trying withdraw ---------------------------");
-        debug::info!(
+        log::info!("--------------------- xdm-adapter: trying withdraw ---------------------------");
+        log::info!(
             ">>> asset: {:?}, location: {:?}",
             asset,
             location
         );
 
 		let who = T::AccountIdConverter::from_location(location).ok_or(())?;
-		debug::info!("who: {:?}", who);
+		log::info!("who: {:?}", who);
 		let currency_id = utils::to_encoded_asset_id(asset).or(Err(Error::FailedToDecode))?;
-		debug::info!("currency_id: {:?}", currency_id);
+		log::info!("currency_id: {:?}", currency_id);
 		let amount: BalanceOf<T> = T::Matcher::matches_fungible(asset)
 			.ok_or(())?
 			.saturated_into();
-		debug::info!("amount: {:?}", amount);
+		log::info!("amount: {:?}", amount);
 		let balance_amount = amount.try_into().map_err(|_| ())?;
-		debug::info!("balance amount: {:?}", balance_amount);
+		log::info!("balance amount: {:?}", balance_amount);
 
 		let mut is_owned_currency = false;
 		if let Ok(utils::AssetLocation::Parachain(paraid)) = utils::try_extract_asset_location(asset) {
@@ -156,7 +156,7 @@ where
 			!is_owned_currency,
 		));
 
-        debug::info!("--------------------- xcm-transactor: success withdraw ---------------------------");
+        log::info!("--------------------- xcm-transactor: success withdraw ---------------------------");
         Ok(asset.clone())
     }
 }
@@ -181,12 +181,12 @@ pub struct AnyLocationFilter;
 impl FilterAssetLocation for AnyLocationFilter
 {
     fn filter_asset_location(asset: &MultiAsset, origin: &MultiLocation) -> bool {
-        debug::info!("filter_asset_location(asset: {:?}, origin: {:?})", asset, origin);
+        log::info!("filter_asset_location(asset: {:?}, origin: {:?})", asset, origin);
         if NativeAsset::filter_asset_location(asset, origin) {
-			debug::info!("return true because the asset is native");
+			log::info!("return true because the asset is native");
             return true;
         }
-		debug::info!("return true because we accept everything");
+		log::info!("return true because we accept everything");
         true
     }
 }
