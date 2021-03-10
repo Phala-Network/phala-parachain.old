@@ -1153,7 +1153,7 @@ dependencies = [
 [[package]]
 name = "cumulus-cli"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#ab0609eebe21eef098cdf7e2122fbcfc334ce676"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
 dependencies = [
  "sc-cli",
  "sc-service",
@@ -1163,7 +1163,7 @@ dependencies = [
 [[package]]
 name = "cumulus-client-collator"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#ab0609eebe21eef098cdf7e2122fbcfc334ce676"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
 dependencies = [
  "cumulus-client-consensus-common",
  "cumulus-client-network",
@@ -1187,7 +1187,7 @@ dependencies = [
 [[package]]
 name = "cumulus-client-consensus-common"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#ab0609eebe21eef098cdf7e2122fbcfc334ce676"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
 dependencies = [
  "async-trait",
  "dyn-clone",
@@ -1212,7 +1212,7 @@ dependencies = [
 [[package]]
 name = "cumulus-client-consensus-relay-chain"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#ab0609eebe21eef098cdf7e2122fbcfc334ce676"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
 dependencies = [
  "async-trait",
  "cumulus-client-consensus-common",
@@ -1237,7 +1237,7 @@ dependencies = [
 [[package]]
 name = "cumulus-client-network"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#ab0609eebe21eef098cdf7e2122fbcfc334ce676"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
 dependencies = [
  "derive_more",
  "futures 0.3.13",
@@ -1261,7 +1261,7 @@ dependencies = [
 [[package]]
 name = "cumulus-client-service"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#ab0609eebe21eef098cdf7e2122fbcfc334ce676"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
 dependencies = [
  "cumulus-client-collator",
  "cumulus-client-consensus-common",
@@ -1285,7 +1285,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-parachain-system"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#ab0609eebe21eef098cdf7e2122fbcfc334ce676"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
 dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
@@ -1314,7 +1314,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-xcm-handler"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#ab0609eebe21eef098cdf7e2122fbcfc334ce676"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -1329,7 +1329,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-core"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#ab0609eebe21eef098cdf7e2122fbcfc334ce676"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
@@ -1344,7 +1344,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-parachain-inherent"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#ab0609eebe21eef098cdf7e2122fbcfc334ce676"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#24b1ee6bd1d96f255889f167e59ef9c9399a6305"
 dependencies = [
  "cumulus-primitives-core",
  "parity-scale-codec",
