@@ -16,7 +16,7 @@ dependencies = [
  "itertools",
  "lazy_static",
  "libsecp256k1 0.3.5 (git+https://github.com/mesalock-linux/libsecp256k1-rs-sgx)",
- "log 0.4.11",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "num-bigint",
  "num-traits 0.2.14",
  "pallet-phala",
@@ -431,7 +431,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hash-db",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "memory-db",
  "pallet-balances",
  "parity-scale-codec",
@@ -456,7 +456,7 @@ dependencies = [
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-std",
  "xcm",
@@ -679,7 +679,7 @@ dependencies = [
  "frame-metadata",
  "frame-support-procedural",
  "impl-trait-for-tuples",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "paste",
  "smallvec",
@@ -734,7 +734,7 @@ source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#645299e8b
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
@@ -1081,20 +1081,20 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.11"
-source = "git+https://github.com/mesalock-linux/log-sgx#5a057d237cf96e9137de08387eb70105d5705648"
-dependencies = [
- "cfg-if 0.1.10",
- "sgx_tstd",
-]
-
-[[package]]
-name = "log"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
 dependencies = [
  "cfg-if 1.0.0",
+]
+
+[[package]]
+name = "log"
+version = "0.4.14"
+source = "git+https://github.com/mesalock-linux/log-sgx#2ca9039a9ebba0ed90ed2ad57425917d4b3a2a24"
+dependencies = [
+ "cfg-if 1.0.0",
+ "sgx_tstd",
 ]
 
 [[package]]
@@ -1242,7 +1242,7 @@ source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#645299e8b
 dependencies = [
  "frame-support",
  "frame-system",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-runtime",
  "sp-std",
@@ -1267,7 +1267,7 @@ version = "2.0.0"
 dependencies = [
  "frame-support",
  "frame-system",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-balances",
  "parity-scale-codec",
  "rustc-hex",
@@ -1284,7 +1284,7 @@ source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#645299e8b
 dependencies = [
  "frame-support",
  "frame-system",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-core",
  "sp-io",
@@ -1351,7 +1351,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "itertools",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "pallet-balances",
  "pallet-phala",
  "parity-scale-codec",
@@ -1452,7 +1452,7 @@ source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#645299e8b
 dependencies = [
  "frame-support",
  "frame-system",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-io",
  "sp-runtime",
@@ -1480,7 +1480,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "impl-trait-for-tuples",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-inherents",
  "sp-runtime",
@@ -1667,7 +1667,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "frame-system-rpc-runtime-api",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "native-nostd-hasher",
  "pallet-balances",
  "pallet-bounties",
@@ -1741,7 +1741,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 [[package]]
 name = "polkadot-core-primitives"
 version = "0.7.30"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#25f6bc852f807e0e7da24a6fb6963a2beb2671ff"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#72243baaedf3ded4226032949a23f8478f5565d9"
 dependencies = [
  "parity-scale-codec",
  "sp-core",
@@ -1752,7 +1752,7 @@ dependencies = [
 [[package]]
 name = "polkadot-parachain"
 version = "0.8.29"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#25f6bc852f807e0e7da24a6fb6963a2beb2671ff"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#72243baaedf3ded4226032949a23f8478f5565d9"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -1766,7 +1766,7 @@ dependencies = [
 [[package]]
 name = "polkadot-primitives"
 version = "0.8.29"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#25f6bc852f807e0e7da24a6fb6963a2beb2671ff"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#72243baaedf3ded4226032949a23f8478f5565d9"
 dependencies = [
  "bitvec",
  "frame-system",
@@ -2125,7 +2125,7 @@ version = "0.19.0"
 source = "git+https://github.com/mesalock-linux/rustls?branch=mesalock_sgx#95b5e79dc24b02f3ce424437eb9698509d0baf58"
 dependencies = [
  "base64 0.13.0",
- "log 0.4.11",
+ "log 0.4.14 (git+https://github.com/mesalock-linux/log-sgx)",
  "ring 0.16.19",
  "sct",
  "sgx_tstd",
@@ -2487,7 +2487,7 @@ name = "sp-api"
 version = "3.0.0"
 source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#645299e8b23ec5fa52935b1a6edbf36886e80141"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-api-proc-macro",
  "sp-core",
@@ -2567,7 +2567,7 @@ dependencies = [
  "hash256-std-hasher",
  "hex",
  "libsecp256k1 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "merlin",
  "num-traits 0.2.14",
  "parity-scale-codec",
@@ -2664,7 +2664,7 @@ dependencies = [
  "either",
  "hash256-std-hasher",
  "impl-trait-for-tuples",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "parity-util-mem",
  "paste",
@@ -3006,7 +3006,7 @@ checksum = "ec051edf7f0fc9499a2cb0947652cab2148b9d7f61cee7605e312e9f970dacaf"
 dependencies = [
  "hash-db",
  "hashbrown",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec",
 ]
 
@@ -3121,7 +3121,7 @@ checksum = "5b7d8b6942b8bb3a9b0e73fc79b98095a27de6fa247615e59d096754a3bc2aa8"
 dependencies = [
  "bumpalo",
  "lazy_static",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro2",
  "quote 1.0.9",
  "syn 1.0.63",
@@ -3163,7 +3163,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0c32691b6c7e6c14e7f8fd55361a9088b507aa49620fcd06c09b3a1082186b9"
 dependencies = [
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-wasm",
  "rustc-demangle",
 ]
@@ -3256,7 +3256,7 @@ checksum = "85e60b0d1b5f99db2556934e21937020776a5d31520bf169e851ac44e6420214"
 [[package]]
 name = "xcm"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#25f6bc852f807e0e7da24a6fb6963a2beb2671ff"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#72243baaedf3ded4226032949a23f8478f5565d9"
 dependencies = [
  "parity-scale-codec",
 ]
@@ -3264,7 +3264,7 @@ dependencies = [
 [[package]]
 name = "xcm-builder"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#25f6bc852f807e0e7da24a6fb6963a2beb2671ff"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#72243baaedf3ded4226032949a23f8478f5565d9"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -3280,11 +3280,11 @@ dependencies = [
 [[package]]
 name = "xcm-executor"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#25f6bc852f807e0e7da24a6fb6963a2beb2671ff"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#72243baaedf3ded4226032949a23f8478f5565d9"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-arithmetic",
  "sp-core",
@@ -3301,7 +3301,7 @@ dependencies = [
  "cumulus-primitives-core",
  "frame-support",
  "frame-system",
- "log 0.4.14",
+ "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "parachain-utils",
  "parity-scale-codec",
  "sp-core",
