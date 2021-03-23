@@ -5412,6 +5412,7 @@ dependencies = [
  "structopt",
  "substrate-subxt",
  "tokio 0.2.25",
+ "xcm",
 ]
 
 [[package]]

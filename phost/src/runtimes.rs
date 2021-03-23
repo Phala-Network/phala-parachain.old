@@ -19,6 +19,7 @@ use sp_runtime::{
     traits::{BlakeTwo256, IdentifyAccount, Verify},
     MultiSignature, OpaqueExtrinsic,
 };
+use xcm::v0::Error as XcmError;
 
 use subxt::{
     extrinsic::DefaultExtra,
@@ -63,6 +64,8 @@ impl Runtime for PhalaNodeRuntime {
         event_type_registry.with_phala_module();
 
         register_default_type_sizes(event_type_registry);
+
+        event_type_registry.register_type_size::<XcmError>("XcmError");
     }
 }
 

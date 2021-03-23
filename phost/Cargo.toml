@@ -26,5 +26,6 @@ sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1
 sp-rpc = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+xcm = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1" }
 
 phala-types = { path = "../common/types" }
