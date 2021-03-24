@@ -160,33 +160,33 @@ construct_runtime! {
 		NodeBlock = parachain_primitives::Block,
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
-		System: frame_system::{Module, Call, Storage, Config, Event<T>},
-		Timestamp: pallet_timestamp::{Module, Call, Storage, Inherent},
-		Utility: pallet_utility::{Module, Call, Event},
-		Identity: pallet_identity::{Module, Call, Storage, Event<T>},
-		Recovery: pallet_recovery::{Module, Call, Storage, Event<T>},
-        Vesting: pallet_vesting::{Module, Call, Storage, Event<T>, Config<T>},
-		Scheduler: pallet_scheduler::{Module, Call, Storage, Event<T>},
-		Proxy: pallet_proxy::{Module, Call, Storage, Event<T>},
-		Multisig: pallet_multisig::{Module, Call, Storage, Event<T>},
-		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Sudo: pallet_sudo::{Module, Call, Storage, Config<T>, Event<T>},
-		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Module, Call, Storage},
-		ParachainSystem: cumulus_pallet_parachain_system::{Module, Call, Storage, Inherent, Event},
-		TransactionPayment: pallet_transaction_payment::{Module, Storage},
-		ParachainInfo: parachain_info::{Module, Storage, Config},
-		XcmHandler: cumulus_pallet_xcm_handler::{Module, Event<T>, Origin, Call},
-		Council: pallet_collective::<Instance1>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		Treasury: pallet_treasury::{Module, Call, Storage, Config, Event<T>},
-		Bounties: pallet_bounties::{Module, Call, Storage, Event<T>},
-		Lottery: pallet_lottery::{Module, Call, Storage, Event<T>},
-		Democracy: pallet_democracy::{Module, Call, Storage, Config, Event<T>},
-		TechnicalCommittee: pallet_collective::<Instance2>::{Module, Call, Storage, Origin<T>, Event<T>, Config<T>},
-		TechnicalMembership: pallet_membership::<Instance1>::{Module, Call, Storage, Event<T>, Config<T>},
-		PhalaModule: pallet_phala::{Module, Call, Config<T>, Storage, Event<T>},
-		PhalaXcmTransactor: xcm_transactor::{Module, Call, Event<T>},
-		MiningStaking: pallet_mining_staking::{Module, Call, Storage, Event<T>},
-		PhaClaim: pallet_claim::{Module, Call, Storage, Event<T>, ValidateUnsigned},
+		System: frame_system::{Pallet, Call, Storage, Config, Event<T>},
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		Utility: pallet_utility::{Pallet, Call, Event},
+		Identity: pallet_identity::{Pallet, Call, Storage, Event<T>},
+		Recovery: pallet_recovery::{Pallet, Call, Storage, Event<T>},
+        Vesting: pallet_vesting::{Pallet, Call, Storage, Event<T>, Config<T>},
+		Scheduler: pallet_scheduler::{Pallet, Call, Storage, Event<T>},
+		Proxy: pallet_proxy::{Pallet, Call, Storage, Event<T>},
+		Multisig: pallet_multisig::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
+		Sudo: pallet_sudo::{Pallet, Call, Storage, Config<T>, Event<T>},
+		RandomnessCollectiveFlip: pallet_randomness_collective_flip::{Pallet, Call, Storage},
+		ParachainSystem: cumulus_pallet_parachain_system::{Pallet, Call, Storage, Inherent, Event},
+		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
+		ParachainInfo: parachain_info::{Pallet, Storage, Config},
+		XcmHandler: cumulus_pallet_xcm_handler::{Pallet, Event<T>, Origin, Call},
+		Council: pallet_collective::<Instance1>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		Treasury: pallet_treasury::{Pallet, Call, Storage, Config, Event<T>},
+		Bounties: pallet_bounties::{Pallet, Call, Storage, Event<T>},
+		Lottery: pallet_lottery::{Pallet, Call, Storage, Event<T>},
+		Democracy: pallet_democracy::{Pallet, Call, Storage, Config, Event<T>},
+		TechnicalCommittee: pallet_collective::<Instance2>::{Pallet, Call, Storage, Origin<T>, Event<T>, Config<T>},
+		TechnicalMembership: pallet_membership::<Instance1>::{Pallet, Call, Storage, Event<T>, Config<T>},
+		Phala: pallet_phala::{Pallet, Call, Config<T>, Storage, Event<T>},
+		PhalaXcmTransactor: xcm_transactor::{Pallet, Call, Event<T>},
+		MiningStaking: pallet_mining_staking::{Pallet, Call, Storage, Event<T>},
+		PhaClaim: pallet_claim::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
 	}
 }
 
@@ -220,7 +220,7 @@ pub type Executive = frame_executive::Executive<
 	Block,
 	frame_system::ChainContext<Runtime>,
 	Runtime,
-	AllModules,
+	AllPallets,
 >;
 
 parameter_types! {
@@ -419,7 +419,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type Event = Event;
 	type ExistentialDeposit = ExistentialDeposit;
-	type AccountStore = frame_system::Module<Runtime>;
+	type AccountStore = frame_system::Pallet<Runtime>;
 	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 }
 
@@ -549,7 +549,7 @@ impl pallet_sudo::Config for Runtime {
 impl cumulus_pallet_parachain_system::Config for Runtime {
 	type Event = Event;
 	type OnValidationData = ();
-	type SelfParaId = parachain_info::Module<Runtime>;
+	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type DownwardMessageHandlers = XcmHandler;
 	type HrmpMessageHandlers = XcmHandler;
 }
@@ -783,7 +783,7 @@ impl pallet_phala::Config for Runtime {
 	type UnixTime = Timestamp;
 	type Treasury = Treasury;
 	type OnRoundEnd = MiningStaking;
-	type ModuleWeightInfo = pallet_phala::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = pallet_phala::weights::SubstrateWeight<Runtime>;
 
 	// Parameters
 	type MaxHeartbeatPerWorkerPerHour = MaxHeartbeatPerWorkerPerHour;
@@ -854,7 +854,7 @@ impl_runtime_apis! {
 		}
 
 		fn random_seed() -> <Block as BlockT>::Hash {
-			RandomnessCollectiveFlip::random_seed()
+			RandomnessCollectiveFlip::random_seed().0
 		}
 	}
 

@@ -5,7 +5,7 @@ use sp_std::prelude::*;
 use sp_std::{cmp, vec, convert::TryInto};
 
 use frame_support::{fail, decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
-use frame_system::{ensure_root, ensure_signed, Module as System};
+use frame_system::{ensure_root, ensure_signed, Pallet as System};
 
 use alloc::{vec::Vec, borrow::ToOwned};
 use codec::{Encode, Decode};
@@ -52,7 +52,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub use weights::ModuleWeightInfo;
+pub use weights::WeightInfo;
 
 type BalanceOf<T> =
 	<<T as Config>::TEECurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -67,11 +67,11 @@ impl OnRoundEnd for () {}
 /// Configure the pallet by specifying the parameters and types on which it depends.
 pub trait Config: frame_system::Config {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
-	type Randomness: Randomness<Self::Hash>;
+	type Randomness: Randomness<Self::Hash, Self::BlockNumber>;
 	type TEECurrency: Currency<Self::AccountId>;
 	type UnixTime: UnixTime;
 	type Treasury: OnUnbalanced<NegativeImbalanceOf<Self>>;
-	type ModuleWeightInfo: ModuleWeightInfo;
+	type WeightInfo: WeightInfo;
 	type OnRoundEnd: OnRoundEnd;
 
 	// Parameters
@@ -356,7 +356,7 @@ decl_module! {
 		}
 
 		// Messaging
-		#[weight = T::ModuleWeightInfo::push_command()]
+		#[weight = T::WeightInfo::push_command()]
 		pub fn push_command(origin, contract_id: u32, payload: Vec<u8>) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 			let num = Self::command_number().unwrap_or(0);
@@ -367,7 +367,7 @@ decl_module! {
 
 		// Registry
 		/// Crerate a new stash or update an existing one.
-		#[weight = T::ModuleWeightInfo::set_stash()]
+		#[weight = T::WeightInfo::set_stash()]
 		pub fn set_stash(origin, controller: T::AccountId) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(!Stash::<T>::contains_key(&controller), Error::<T>::AlreadyPaired);
@@ -395,7 +395,7 @@ decl_module! {
 		}
 
 		/// Update the payout preferences. Must be called by the controller.
-		#[weight = T::ModuleWeightInfo::set_payout_prefs()]
+		#[weight = T::WeightInfo::set_payout_prefs()]
 		pub fn set_payout_prefs(origin, payout_commission: Option<u32>,
 								payout_target: Option<T::AccountId>)
 								-> dispatch::DispatchResult {
@@ -416,7 +416,7 @@ decl_module! {
 		}
 
 		/// Register a worker node with a valid Remote Attestation report
-		#[weight = T::ModuleWeightInfo::register_worker()]
+		#[weight = T::WeightInfo::register_worker()]
 		pub fn register_worker(origin, encoded_runtime_info: Vec<u8>, report: Vec<u8>, signature: Vec<u8>, raw_signing_cert: Vec<u8>) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(Stash::<T>::contains_key(&who), Error::<T>::NotController);
@@ -519,7 +519,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::ModuleWeightInfo::force_register_worker()]
+		#[weight = T::WeightInfo::force_register_worker()]
 		fn force_register_worker(origin, stash: T::AccountId, machine_id: Vec<u8>, pubkey: Vec<u8>) -> dispatch::DispatchResult {
 			ensure_root(origin)?;
 			ensure!(StashState::<T>::contains_key(&stash), Error::<T>::StashNotFound);
@@ -527,7 +527,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::ModuleWeightInfo::force_set_contract_key()]
+		#[weight = T::WeightInfo::force_set_contract_key()]
 		fn force_set_contract_key(origin, id: u32, pubkey: Vec<u8>) -> dispatch::DispatchResult {
 			ensure_root(origin)?;
 			ContractKey::insert(id, pubkey);
@@ -536,7 +536,7 @@ decl_module! {
 
 		// Mining
 
-		#[weight = T::ModuleWeightInfo::start_mining_intention()]
+		#[weight = T::WeightInfo::start_mining_intention()]
 		fn start_mining_intention(origin) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(Stash::<T>::contains_key(&who), Error::<T>::ControllerNotFound);
@@ -560,7 +560,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::ModuleWeightInfo::stop_mining_intention()]
+		#[weight = T::WeightInfo::stop_mining_intention()]
 		fn stop_mining_intention(origin) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 			ensure!(Stash::<T>::contains_key(&who), Error::<T>::ControllerNotFound);
@@ -572,7 +572,7 @@ decl_module! {
 
 		// Token
 
-		#[weight = T::ModuleWeightInfo::transfer_to_tee()]
+		#[weight = T::WeightInfo::transfer_to_tee()]
 		fn transfer_to_tee(origin, #[compact] amount: BalanceOf<T>) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
 			T::TEECurrency::transfer(&who, &Self::account_id(), amount, AllowDeath)
@@ -581,7 +581,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::ModuleWeightInfo::transfer_to_chain()]
+		#[weight = T::WeightInfo::transfer_to_chain()]
 		fn transfer_to_chain(origin, data: Vec<u8>) -> dispatch::DispatchResult {
 			// This is a specialized Contract-to-Chain message passing where the confidential
 			// contract is always Balances (id = 2)
@@ -610,73 +610,9 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = 0]
-		fn transfer_token_to_tee(origin, token_id: Vec<u8>, #[compact] amount: BalanceOf<T>) -> dispatch::DispatchResult {
-			let who = ensure_signed(origin)?;
-			Self::deposit_event(RawEvent::TransferTokenToTee(who, token_id, amount));
-			Ok(())
-		}
-
-		#[weight = 0]
-		fn transfer_token_to_chain(origin, data: Vec<u8>) -> dispatch::DispatchResult {
-			const CONTRACT_ID: u32 = 3;
-			ensure_signed(origin)?;
-			let transfer_data: TransferTokenData<<T as frame_system::Config>::AccountId, BalanceOf<T>>
-				= Decode::decode(&mut &data[..]).map_err(|_| Error::<T>::InvalidInput)?;
-			// Check sequence
-			let sequence = IngressSequence::get(CONTRACT_ID);
-			ensure!(transfer_data.data.sequence == sequence + 1, Error::<T>::BadMessageSequence);
-			// Contract key
-			ensure!(ContractKey::contains_key(CONTRACT_ID), Error::<T>::InvalidContract);
-			let pubkey = ContractKey::get(CONTRACT_ID);
-			// Validate TEE signature
-			Self::verify_signature(&pubkey, &transfer_data)?;
-			// Announce the successful execution
-			IngressSequence::insert(CONTRACT_ID, sequence + 1);
-			Self::deposit_event(RawEvent::TransferTokenToChain(transfer_data.data.dest, transfer_data.data.token_id, transfer_data.data.amount, sequence + 1));
-			Ok(())
-		}
-
-		#[weight = 0]
-		fn transfer_x_token_to_chain(origin, data: Vec<u8>) -> dispatch::DispatchResult {
-			const CONTRACT_ID: u32 = 3;
-			let who = ensure_signed(origin.clone())?;
-
-			let transfer_data: TransferXTokenData<<T as frame_system::Config>::AccountId, BalanceOf<T>>
-				= Decode::decode(&mut &data[..]).map_err(|_| Error::<T>::InvalidInput)?;
-			// Check sequence
-			let sequence = IngressSequence::get(CONTRACT_ID);
-			ensure!(transfer_data.data.sequence == sequence + 1, Error::<T>::BadMessageSequence);
-			// Contract key
-			ensure!(ContractKey::contains_key(CONTRACT_ID), Error::<T>::InvalidContract);
-			let pubkey = ContractKey::get(CONTRACT_ID);
-			// Validate TEE signature
-			Self::verify_signature(&pubkey, &transfer_data)?;
-
-			// build crosschain transfer XCM message
-			let xcm = Self::build_xtoken_transfering_xcm(
-				&transfer_data.data.currency_id,
-				transfer_data.data.para_id,
-				transfer_data.data.dest.clone(),
-				transfer_data.data.dest_network,
-				transfer_data.data.amount
-			).unwrap();
-			let xcm_origin =
-			T::AccountIdConverter::try_into_location(who.clone()).map_err(|_| Error::<T>::BadXCMLocation)?;
-			match T::XcmExecutor::execute_xcm(xcm_origin, xcm) {
-				Ok(_) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
-				Err(_err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
-			}
-
-			// Announce the successful execution
-			IngressSequence::insert(CONTRACT_ID, sequence + 1);
-
-			Ok(())
-		}
-
 		// Messaging
 
-		#[weight = T::ModuleWeightInfo::sync_worker_message()]
+		#[weight = T::WeightInfo::sync_worker_message()]
 		fn sync_worker_message(origin, msg: Vec<u8>) -> dispatch::DispatchResult {
 			// TODO: allow anyone to relay the message
 			let who = ensure_signed(origin)?;
@@ -756,14 +692,14 @@ decl_module! {
 
 		// Debug only
 
-		#[weight = T::ModuleWeightInfo::force_next_round()]
+		#[weight = T::WeightInfo::force_next_round()]
 		fn force_next_round(origin) -> dispatch::DispatchResult {
 			ensure_root(origin)?;
 			ForceNextRound::put(true);
 			Ok(())
 		}
 
-		#[weight = T::ModuleWeightInfo::force_add_fire()]
+		#[weight = T::WeightInfo::force_add_fire()]
 		fn force_add_fire(origin, targets: Vec<T::AccountId>, amounts: Vec<BalanceOf<T>>)
 		-> dispatch::DispatchResult {
 			ensure_root(origin)?;
@@ -776,14 +712,14 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::ModuleWeightInfo::force_set_virtual_tasks()]
+		#[weight = T::WeightInfo::force_set_virtual_tasks()]
 		fn force_set_virtual_tasks(origin, target: u32) -> dispatch::DispatchResult {
 			ensure_root(origin)?;
 			TargetVirtualTaskCount::put(target);
 			Ok(())
 		}
 
-		#[weight = T::ModuleWeightInfo::force_reset_fire()]
+		#[weight = T::WeightInfo::force_reset_fire()]
 		fn force_reset_fire(origin) -> dispatch::DispatchResult {
 			ensure_root(origin)?;
 			Fire2::<T>::remove_all();
@@ -825,7 +761,7 @@ decl_module! {
 
 		// Whitelist
 
-		#[weight = T::ModuleWeightInfo::add_mrenclave()]
+		#[weight = T::WeightInfo::add_mrenclave()]
 		fn add_mrenclave(origin, mr_enclave: Vec<u8>, mr_signer: Vec<u8>, isv_prod_id: Vec<u8>, isv_svn: Vec<u8>) -> dispatch::DispatchResult {
 			ensure_root(origin)?;
 			ensure!(mr_enclave.len() == 32 && mr_signer.len() == 32 && isv_prod_id.len() == 2 && isv_svn.len() == 2, Error::<T>::InvalidInputBadLength);
@@ -833,7 +769,7 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::ModuleWeightInfo::remove_mrenclave_by_raw_data()]
+		#[weight = T::WeightInfo::remove_mrenclave_by_raw_data()]
 		fn remove_mrenclave_by_raw_data(origin, mr_enclave: Vec<u8>, mr_signer: Vec<u8>, isv_prod_id: Vec<u8>, isv_svn: Vec<u8>) -> dispatch::DispatchResult {
 			ensure_root(origin)?;
 			ensure!(mr_enclave.len() == 32 && mr_signer.len() == 32 && isv_prod_id.len() == 2 && isv_svn.len() == 2, Error::<T>::InvalidInputBadLength);
@@ -841,10 +777,74 @@ decl_module! {
 			Ok(())
 		}
 
-		#[weight = T::ModuleWeightInfo::remove_mrenclave_by_index()]
+		#[weight = T::WeightInfo::remove_mrenclave_by_index()]
 		fn remove_mrenclave_by_index(origin, index: u32) -> dispatch::DispatchResult {
 			ensure_root(origin)?;
 			Self::remove_mrenclave_from_whitelist_by_index(index as usize)?;
+			Ok(())
+		}
+
+		#[weight = 0]
+		fn transfer_token_to_tee(origin, token_id: Vec<u8>, #[compact] amount: BalanceOf<T>) -> dispatch::DispatchResult {
+			let who = ensure_signed(origin)?;
+			Self::deposit_event(RawEvent::TransferTokenToTee(who, token_id, amount));
+			Ok(())
+		}
+
+		#[weight = 0]
+		fn transfer_token_to_chain(origin, data: Vec<u8>) -> dispatch::DispatchResult {
+			const CONTRACT_ID: u32 = 3;
+			ensure_signed(origin)?;
+			let transfer_data: TransferTokenData<<T as frame_system::Config>::AccountId, BalanceOf<T>>
+				= Decode::decode(&mut &data[..]).map_err(|_| Error::<T>::InvalidInput)?;
+			// Check sequence
+			let sequence = IngressSequence::get(CONTRACT_ID);
+			ensure!(transfer_data.data.sequence == sequence + 1, Error::<T>::BadMessageSequence);
+			// Contract key
+			ensure!(ContractKey::contains_key(CONTRACT_ID), Error::<T>::InvalidContract);
+			let pubkey = ContractKey::get(CONTRACT_ID);
+			// Validate TEE signature
+			Self::verify_signature(&pubkey, &transfer_data)?;
+			// Announce the successful execution
+			IngressSequence::insert(CONTRACT_ID, sequence + 1);
+			Self::deposit_event(RawEvent::TransferTokenToChain(transfer_data.data.dest, transfer_data.data.token_id, transfer_data.data.amount, sequence + 1));
+			Ok(())
+		}
+
+		#[weight = 0]
+		fn transfer_x_token_to_chain(origin, data: Vec<u8>) -> dispatch::DispatchResult {
+			const CONTRACT_ID: u32 = 3;
+			let who = ensure_signed(origin.clone())?;
+
+			let transfer_data: TransferXTokenData<<T as frame_system::Config>::AccountId, BalanceOf<T>>
+				= Decode::decode(&mut &data[..]).map_err(|_| Error::<T>::InvalidInput)?;
+			// Check sequence
+			let sequence = IngressSequence::get(CONTRACT_ID);
+			ensure!(transfer_data.data.sequence == sequence + 1, Error::<T>::BadMessageSequence);
+			// Contract key
+			ensure!(ContractKey::contains_key(CONTRACT_ID), Error::<T>::InvalidContract);
+			let pubkey = ContractKey::get(CONTRACT_ID);
+			// Validate TEE signature
+			Self::verify_signature(&pubkey, &transfer_data)?;
+
+			// build crosschain transfer XCM message
+			let xcm = Self::build_xtoken_transfering_xcm(
+				&transfer_data.data.currency_id,
+				transfer_data.data.para_id,
+				transfer_data.data.dest.clone(),
+				transfer_data.data.dest_network,
+				transfer_data.data.amount
+			).unwrap();
+			let xcm_origin =
+			T::AccountIdConverter::try_into_location(who.clone()).map_err(|_| Error::<T>::BadXCMLocation)?;
+			match T::XcmExecutor::execute_xcm(xcm_origin, xcm) {
+				Ok(_) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
+				Err(_err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
+			}
+
+			// Announce the successful execution
+			IngressSequence::insert(CONTRACT_ID, sequence + 1);
+
 			Ok(())
 		}
 	}
@@ -1234,7 +1234,7 @@ impl<T: Config> Module<T> {
 			BlockRewardSeeds::<T>::remove(now - slash_window);
 		}
 		// Generate the seed and targets
-		let seed_hash = T::Randomness::random(RANDOMNESS_SUBJECT);
+		let seed_hash = T::Randomness::random(RANDOMNESS_SUBJECT).0;
 		let seed: U256 = AsRef::<[u8]>::as_ref(&seed_hash).into();
 		let round_stats = RoundStatsHistory::get(round.round);
 		let seed_info = BlockRewardInfo {
@@ -1442,58 +1442,58 @@ impl<T: Config> Module<T> {
 		AccumulatedFire2::<T>::mutate(|x| *x -= to_sub);
 	}
 
-	fn build_xtoken_transfering_xcm(
-		currency_id: &Vec<u8>,
-		dest_paraid: ParaId,
-		dest_account: T::AccountId,
-		dest_network: NetworkId,
-		amount: BalanceOf<T>
-	) -> Option<Xcm> {
-		use parachain_utils::AssetLocation;
-		use sp_std::convert::TryFrom;
-		// only support transfer parachain reserve token back to it's origin netowrk
+    fn build_xtoken_transfering_xcm(
+        currency_id: &Vec<u8>,
+        dest_paraid: ParaId,
+        dest_account: T::AccountId,
+        dest_network: NetworkId,
+        amount: BalanceOf<T>
+    ) -> Option<Xcm> {
+        use parachain_utils::AssetLocation;
+        use sp_std::convert::TryFrom;
+        // only support transfer parachain reserve token back to it's origin netowrk
 
-		let location = parachain_utils::from_encoded_asset_id(&currency_id)
-			.expect("Error while decoding currency_id; qed.");
+        let location = parachain_utils::from_encoded_asset_id(&currency_id)
+            .expect("Error while decoding currency_id; qed.");
 
-		let encoded_account = Encode::encode(&dest_account);
-		let dest = if encoded_account.len() == 32 {
-			Junction::AccountId32 {
-				network: dest_network,
-				id: encoded_account.try_into().map_err(|_| Error::<T>::FailedToBuildXCM).ok()?,
-			}
-			.into()
-		} else {
-			Junction::GeneralKey(encoded_account).into()
-		};
+        let encoded_account = Encode::encode(&dest_account);
+        let dest = if encoded_account.len() == 32 {
+            Junction::AccountId32 {
+                network: dest_network,
+                id: encoded_account.try_into().map_err(|_| Error::<T>::FailedToBuildXCM).ok()?,
+            }
+                .into()
+        } else {
+            Junction::GeneralKey(encoded_account).into()
+        };
 
-		match parachain_utils::AssetLocation::try_from(&location)
-			.expect("Error while matching asset location; qed.") {
-			AssetLocation::Parachain(reserve_chain) => {
-				if ParaId::from(reserve_chain) != dest_paraid {
-					panic!("Must transfer back to the reserve chain; qed.");
-				}
-				Some(Xcm::WithdrawAsset {
-					assets: vec![MultiAsset::ConcreteFungible {
-						id: location,
-						amount: amount.saturated_into(),
-					}],
-					effects: vec![Order::InitiateReserveWithdraw {
-						assets: vec![MultiAsset::All],
-						reserve: (Junction::Parent, Junction::Parachain {
-							id: reserve_chain.into(),
-						})
-						.into(),
-						effects: vec![Order::DepositAsset {
-							assets: vec![MultiAsset::All],
-							dest,
-						}],
-					}],
-				})
-			},
-			_ => None,
-		}
-	}
+        match parachain_utils::AssetLocation::try_from(&location)
+            .expect("Error while matching asset location; qed.") {
+            AssetLocation::Parachain(reserve_chain) => {
+                if ParaId::from(reserve_chain) != dest_paraid {
+                    panic!("Must transfer back to the reserve chain; qed.");
+                }
+                Some(Xcm::WithdrawAsset {
+                    assets: vec![MultiAsset::ConcreteFungible {
+                        id: location,
+                        amount: amount.saturated_into(),
+                    }],
+                    effects: vec![Order::InitiateReserveWithdraw {
+                        assets: vec![MultiAsset::All],
+                        reserve: (Junction::Parent, Junction::Parachain {
+                            id: reserve_chain.into(),
+                        })
+                            .into(),
+                        effects: vec![Order::DepositAsset {
+                            assets: vec![MultiAsset::All],
+                            dest,
+                        }],
+                    }],
+                })
+            },
+            _ => None,
+        }
+    }
 }
 
 fn calc_overall_score(features: &Vec<u32>) -> Result<u32, ()> {

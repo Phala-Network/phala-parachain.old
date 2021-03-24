@@ -41,7 +41,7 @@ use subxt::{
     register_default_type_sizes
 };
 
-use self::phala::PhalaModuleEventTypeRegistry;
+use self::phala::PhalaEventTypeRegistry;
 
 /// PhalaNode concrete type definitions compatible with those for kusama, v0.7
 ///
@@ -61,7 +61,7 @@ impl Runtime for PhalaNodeRuntime {
         event_type_registry.with_sudo();
         event_type_registry.with_balances();
 
-        event_type_registry.with_phala_module();
+        event_type_registry.with_phala();
 
         register_default_type_sizes(event_type_registry);
 
@@ -87,7 +87,7 @@ impl Balances for PhalaNodeRuntime {
 
 impl Sudo for PhalaNodeRuntime {}
 
-impl phala::PhalaModule for PhalaNodeRuntime {}
+impl phala::Phala for PhalaNodeRuntime {}
 
 impl mining_staking::MiningStaking for PhalaNodeRuntime {}
 
@@ -131,7 +131,7 @@ pub mod phala {
     pub struct EthereumAddress([u8; 20]);
 
     #[module]
-    pub trait PhalaModule: System + Balances {
+    pub trait Phala: System + Balances {
         #![event_type(BlockRewardInfo)]
         #![event_type(PayoutReason)]
         // Types used by pallets/claim
@@ -140,7 +140,7 @@ pub mod phala {
     }
 
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
-    pub struct PushCommandCall<T: PhalaModule> {
+    pub struct PushCommandCall<T: Phala> {
         pub _runtime: PhantomData<T>,
         pub contract_id: u32,
         pub payload: Vec<u8>,
@@ -148,7 +148,7 @@ pub mod phala {
 
     /// The call to transfer_to_tee
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
-    pub struct TransferToTeeCall<T: PhalaModule> {
+    pub struct TransferToTeeCall<T: Phala> {
         /// The amount will transfer to tee account
         #[codec(compact)]
         pub amount: <T as Balances>::Balance,
@@ -156,7 +156,7 @@ pub mod phala {
 
     /// The call to transfer_to_chain
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
-    pub struct TransferToChainCall<T: PhalaModule> {
+    pub struct TransferToChainCall<T: Phala> {
         /// Runtime marker
         pub _runtime: PhantomData<T>,
         /// The transfer transaction data, SCALE encoded
@@ -165,7 +165,7 @@ pub mod phala {
 
     /// The call to transfer_token_to_chain
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
-    pub struct TransferTokenToChainCall<T: PhalaModule> {
+    pub struct TransferTokenToChainCall<T: Phala> {
         /// Runtime marker
         pub _runtime: PhantomData<T>,
         /// The transfer transaction data, SCALA encoded
@@ -174,7 +174,7 @@ pub mod phala {
 
     /// The call to transfer_token_to_chain
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
-    pub struct TransferXTokenToChainCall<T: PhalaModule> {
+    pub struct TransferXTokenToChainCall<T: Phala> {
         /// Runtime marker
         pub _runtime: PhantomData<T>,
         /// The transfer transaction data, SCALA encoded
@@ -183,7 +183,7 @@ pub mod phala {
 
     /// The call to register_worker
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
-    pub struct RegisterWorkerCall<T: PhalaModule> {
+    pub struct RegisterWorkerCall<T: Phala> {
         /// Runtime marker
         pub _runtime: PhantomData<T>,
         /// The encoded runtime info
@@ -198,19 +198,19 @@ pub mod phala {
 
     /// The call to reset_worker
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
-    pub struct ResetWorkerCall<T: PhalaModule> {
+    pub struct ResetWorkerCall<T: Phala> {
         /// Runtime marker
         pub _runtime: PhantomData<T>,
     }
 
     #[derive(Clone, Debug, Eq, PartialEq, Store, Encode)]
-    pub struct IngressSequenceStore<T: PhalaModule> {
+    pub struct IngressSequenceStore<T: Phala> {
         #[store(returns = u64)]
         /// Runtime marker.
         pub _runtime: PhantomData<T>,
         pub contract_id: u32,
     }
-    impl<T: PhalaModule> IngressSequenceStore<T> {
+    impl<T: Phala> IngressSequenceStore<T> {
         pub fn new(contract_id: u32) -> Self {
             Self {
                 _runtime: Default::default(),
@@ -220,13 +220,13 @@ pub mod phala {
     }
 
     #[derive(Clone, Debug, Eq, PartialEq, Store, Encode)]
-    pub struct MachineOwnerStore<T: PhalaModule> {
+    pub struct MachineOwnerStore<T: Phala> {
         #[store(returns = [u8; 32])]
         /// Runtime marker.
         pub _runtime: PhantomData<T>,
         pub machine_id: Vec<u8>,
     }
-    impl<T: PhalaModule> MachineOwnerStore<T> {
+    impl<T: Phala> MachineOwnerStore<T> {
         pub fn new(machine_id: Vec<u8>) -> Self {
             Self {
                 _runtime: Default::default(),
@@ -236,7 +236,7 @@ pub mod phala {
     }
     /// The call to transfer_to_chain
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
-    pub struct HeartbeatCall<T: PhalaModule> {
+    pub struct HeartbeatCall<T: Phala> {
         /// Runtime marker
         pub _runtime: PhantomData<T>,
         /// The heartbeat data, SCALE encoded
@@ -245,12 +245,12 @@ pub mod phala {
 
     /// Storage: Stash
     #[derive(Clone, Debug, Eq, PartialEq, Store, Encode)]
-    pub struct StashStore<T: PhalaModule> {
+    pub struct StashStore<T: Phala> {
         #[store(returns = T::AccountId)]
         pub _runtime: PhantomData<T>,
         pub account_id: T::AccountId,
     }
-    impl<T: PhalaModule> StashStore<T> {
+    impl<T: Phala> StashStore<T> {
         pub fn new(account_id: T::AccountId) -> Self {
             Self {
                 _runtime: Default::default(),
@@ -261,12 +261,12 @@ pub mod phala {
 
     /// Storage: WorkerIngress
     #[derive(Clone, Debug, Eq, PartialEq, Store, Encode)]
-    pub struct WorkerIngressStore<T: PhalaModule> {
+    pub struct WorkerIngressStore<T: Phala> {
         #[store(returns = u64)]
         pub _runtime: PhantomData<T>,
         pub account_id: T::AccountId,
     }
-    impl<T: PhalaModule> WorkerIngressStore<T> {
+    impl<T: Phala> WorkerIngressStore<T> {
         pub fn new(account_id: T::AccountId) -> Self {
             Self {
                 _runtime: Default::default(),
@@ -277,20 +277,20 @@ pub mod phala {
 
     /// Storage: OnlineWorkers
     #[derive(Clone, Debug, Eq, PartialEq, Store, Encode, Default)]
-    pub struct OnlineWorkers<T: PhalaModule> {
+    pub struct OnlineWorkers<T: Phala> {
         #[store(returns = u32)]
         pub _runtime: PhantomData<T>,
     }
     /// Storage: ComputeWorkers
     #[derive(Clone, Debug, Eq, PartialEq, Store, Encode, Default)]
-    pub struct ComputeWorkers<T: PhalaModule> {
+    pub struct ComputeWorkers<T: Phala> {
         #[store(returns = u32)]
         pub _runtime: PhantomData<T>,
     }
 
     /// Storage: WorkerState
     #[derive(Clone, Debug, Eq, PartialEq, Store, Encode)]
-    pub struct WorkerStateStore<T: PhalaModule> {
+    pub struct WorkerStateStore<T: Phala> {
         #[store(returns = phala_types::WorkerInfo<T::BlockNumber>)]
         pub _runtime: PhantomData<T>,
         pub account_id: T::AccountId,
@@ -298,7 +298,7 @@ pub mod phala {
 
     /// The call to sync_worker_message
     #[derive(Clone, Debug, PartialEq, Call, Encode)]
-    pub struct SyncWorkerMessageCall<T: PhalaModule> {
+    pub struct SyncWorkerMessageCall<T: Phala> {
         /// Runtime marker
         pub _runtime: PhantomData<T>,
         /// The raw message, SCALE encoded

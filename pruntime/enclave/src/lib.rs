@@ -1490,10 +1490,10 @@ fn validate_worker_snapshot(
     println!("validate_worker_snapshot()");
     use light_validation::utils::storage_prefix;
     use phala_types::WorkerStateEnum;
-    let prefix_onlineworkers = storage_prefix("PhalaModule", "OnlineWorkers");
-    let prefix_computeworkers = storage_prefix("PhalaModule", "ComputeWorkers");
-    let prefix_workerstate = storage_prefix("PhalaModule", "WorkerState");
-    let prefix_stakereceived = storage_prefix("MiningStaking", "StakeReceived");
+    let prefix_onlineworkers = storage_prefix("Phala", "OnlineWorkers");
+    let prefix_computeworkers = storage_prefix("Phala", "ComputeWorkers");
+    let prefix_workerstate = storage_prefix("Phala", "WorkerState");
+    let prefix_stakereceived = storage_prefix("Mining", "StakeReceived");
 
     let cond = [
         // Check keys

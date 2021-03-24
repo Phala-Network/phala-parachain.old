@@ -87,19 +87,6 @@ struct Args {
     reset_egress: bool,
 
     #[structopt(
-        long = "fetch-heartbeat-from-buffer",
-        help = "Manual fetch heartbeat data"
-    )]
-    fetch_heartbeat_from_buffer: bool,
-
-    #[structopt(
-        default_value = "5",
-        long = "heartbeat-interval",
-        help = "Frequency of sending heartbeat"
-    )]
-    heartbeat_interval: u32,
-
-    #[structopt(
         default_value = "ws://localhost:9944",
         long,
         help = "Substrate rpc websocket endpoint"
@@ -274,7 +261,7 @@ async fn bisec_setid_change(
     // Run binary search only on blocks with justification
     let headers: Vec<&Header> = known_blocks
         .iter()
-        .filter(|b| b.block.block.header.number > last_block && b.block.justification.is_some())
+        .filter(|b| b.block.block.header.number > last_block && b.block.justifications.is_some())
         .map(|b| &b.block.block.header)
         .collect();
     let mut l = 0i64;
@@ -423,6 +410,8 @@ async fn sync_events_only(
     Ok(())
 }
 
+const GRANDPA_ENGINE_ID: sp_runtime::ConsensusEngineId = *b"FRNK";
+
 async fn batch_sync_block(
     client: &XtClient,
     paraclient: &XtClient,
@@ -469,7 +458,7 @@ async fn batch_sync_block(
         let header_end = cmp::min(end_buffer, end_set_id_change);
         let mut header_idx = header_end;
         while header_idx >= 0 {
-            if block_buf[header_idx as usize].block.justification.is_some() {
+            if block_buf[header_idx as usize].block.justifications.is_some() {
                 break;
             }
             header_idx -= 1;
@@ -488,7 +477,7 @@ async fn batch_sync_block(
             .iter()
             .map(|b| HeaderToSync {
                 header: b.block.block.header.clone(),
-                justification: b.block.justification.clone(),
+                justification: b.block.justifications.clone().unwrap().into_justification(GRANDPA_ENGINE_ID),
             })
             .collect();
 
@@ -921,7 +910,7 @@ async fn bridge(args: Args) -> Result<(), Error> {
         );
         for b in next_block..=batch_end {
             let block = get_block_with_events(&client, Some(b)).await?;
-            if block.block.justification.is_some() {
+            if block.block.justifications.is_some() {
                 println!(
                     "block with justification at: {}",
                     block.block.block.header.number

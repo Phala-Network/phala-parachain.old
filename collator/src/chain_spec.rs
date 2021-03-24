@@ -222,7 +222,7 @@ fn testnet_genesis(
 		pallet_treasury: Default::default(),
 		pallet_vesting: Default::default(),
 		pallet_democracy: parachain_runtime::DemocracyConfig::default(),
-		pallet_phala: parachain_runtime::PhalaModuleConfig {
+		pallet_phala: parachain_runtime::PhalaConfig {
 			stakers: initial_authorities.iter().map(|x| {
 				(x.0.clone(), x.1.clone(), dev_ecdsa_pubkey.clone())
 			}).collect(),
