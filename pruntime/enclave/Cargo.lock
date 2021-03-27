@@ -434,7 +434,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-parachain-system"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#10887b728c563329845192915069a094b3f06139"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#9d89ed653217203810822483ae86fd8867f59620"
 dependencies = [
  "cumulus-primitives-core",
  "cumulus-primitives-parachain-inherent",
@@ -462,7 +462,7 @@ dependencies = [
 [[package]]
 name = "cumulus-pallet-xcm-handler"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#10887b728c563329845192915069a094b3f06139"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#9d89ed653217203810822483ae86fd8867f59620"
 dependencies = [
  "cumulus-primitives-core",
  "frame-support",
@@ -477,7 +477,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-core"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#10887b728c563329845192915069a094b3f06139"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#9d89ed653217203810822483ae86fd8867f59620"
 dependencies = [
  "impl-trait-for-tuples",
  "parity-scale-codec",
@@ -492,7 +492,7 @@ dependencies = [
 [[package]]
 name = "cumulus-primitives-parachain-inherent"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#10887b728c563329845192915069a094b3f06139"
+source = "git+https://github.com/paritytech/cumulus?branch=rococo-v1#9d89ed653217203810822483ae86fd8867f59620"
 dependencies = [
  "cumulus-primitives-core",
  "parity-scale-codec",
@@ -537,7 +537,7 @@ dependencies = [
  "convert_case",
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -612,7 +612,7 @@ checksum = "946ee94e3dbf58fdd324f9ce245c7b238d46a66f00e86a020b71996349e46cce"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -714,7 +714,7 @@ dependencies = [
  "frame-support-procedural-tools",
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -726,7 +726,7 @@ dependencies = [
  "proc-macro-crate 1.0.0",
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -736,7 +736,7 @@ source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#1404f2af4
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -1008,7 +1008,7 @@ checksum = "d5dacb10c5b3bb92d46ba347505a9041e676bb20ad220101326bffb0c93031ee"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -1622,7 +1622,7 @@ dependencies = [
  "proc-macro-crate 0.1.5",
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -1646,7 +1646,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f557c32c6d268a07c921471619c0295f5efad3a0e76d4f97a05c091a51d110b2"
 dependencies = [
  "proc-macro2",
- "syn 1.0.64",
+ "syn 1.0.65",
  "synstructure",
 ]
 
@@ -1777,7 +1777,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 [[package]]
 name = "polkadot-core-primitives"
 version = "0.7.30"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#369dc36165a2852ca78fcb9f4d2b5b27e93187f7"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#4dd62f1fb550736cead03d4adff948475df8abba"
 dependencies = [
  "parity-scale-codec",
  "sp-core",
@@ -1788,7 +1788,7 @@ dependencies = [
 [[package]]
 name = "polkadot-parachain"
 version = "0.8.29"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#369dc36165a2852ca78fcb9f4d2b5b27e93187f7"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#4dd62f1fb550736cead03d4adff948475df8abba"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -1802,7 +1802,7 @@ dependencies = [
 [[package]]
 name = "polkadot-primitives"
 version = "0.8.29"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#369dc36165a2852ca78fcb9f4d2b5b27e93187f7"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#4dd62f1fb550736cead03d4adff948475df8abba"
 dependencies = [
  "bitvec",
  "frame-system",
@@ -2038,7 +2038,7 @@ checksum = "4c38e3aecd2b21cb3959637b883bb3714bc7e43f0268b9a29d3743ee3e55cdd2"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -2308,7 +2308,7 @@ checksum = "b093b7a2bb58203b5da3056c05b4ec1fed827dcfdb37347a8841695263b3d06d"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -2552,7 +2552,7 @@ dependencies = [
  "proc-macro-crate 1.0.0",
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -2639,7 +2639,7 @@ source = "git+https://github.com/paritytech/substrate?branch=rococo-v1#1404f2af4
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -2747,7 +2747,7 @@ dependencies = [
  "proc-macro-crate 1.0.0",
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -2941,9 +2941,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.64"
+version = "1.0.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fd9d1e9976102a03c542daa2eff1b43f9d72306342f3f8b3ed5fb8908195d6f"
+checksum = "f3a1d708c221c5a612956ef9f75b37e454e88d1f7b899fbd3a18d4252012d663"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
@@ -2967,7 +2967,7 @@ checksum = "b834f2d66f734cb897113e34aaff2f1ab4719ca946f9a7358dba8f8064148701"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
  "unicode-xid 0.2.1",
 ]
 
@@ -3008,7 +3008,7 @@ checksum = "7765189610d8241a44529806d6fd1f2e0a08734313a35d5b3a556f92b381f3c0"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
 ]
 
 [[package]]
@@ -3181,7 +3181,7 @@ dependencies = [
  "log 0.4.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
  "wasm-bindgen-shared",
 ]
 
@@ -3203,7 +3203,7 @@ checksum = "96eb45c1b2ee33545a813a92dbb53856418bf7eb54ab34f7f7ff1448a5b3735d"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -3313,7 +3313,7 @@ checksum = "85e60b0d1b5f99db2556934e21937020776a5d31520bf169e851ac44e6420214"
 [[package]]
 name = "xcm"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#369dc36165a2852ca78fcb9f4d2b5b27e93187f7"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#4dd62f1fb550736cead03d4adff948475df8abba"
 dependencies = [
  "parity-scale-codec",
 ]
@@ -3321,7 +3321,7 @@ dependencies = [
 [[package]]
 name = "xcm-builder"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#369dc36165a2852ca78fcb9f4d2b5b27e93187f7"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#4dd62f1fb550736cead03d4adff948475df8abba"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -3337,7 +3337,7 @@ dependencies = [
 [[package]]
 name = "xcm-executor"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#369dc36165a2852ca78fcb9f4d2b5b27e93187f7"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#4dd62f1fb550736cead03d4adff948475df8abba"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
@@ -3397,7 +3397,7 @@ checksum = "c3f369ddb18862aba61aa49bf31e74d29f0f162dec753063200e1dc084345d16"
 dependencies = [
  "proc-macro2",
  "quote 1.0.9",
- "syn 1.0.64",
+ "syn 1.0.65",
  "synstructure",
 ]
 
