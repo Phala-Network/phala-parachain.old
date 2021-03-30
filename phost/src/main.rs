@@ -475,9 +475,16 @@ async fn batch_sync_block(
         let block_batch: Vec<BlockWithEvents> = block_buf.drain(..=(header_idx as usize)).collect();
         let header_batch: Vec<HeaderToSync> = block_batch
             .iter()
-            .map(|b| HeaderToSync {
-                header: b.block.block.header.clone(),
-                justification: b.block.justifications.clone().unwrap().into_justification(GRANDPA_ENGINE_ID),
+            .map(|b| {
+                let justifications = match b.block.justifications.clone() {
+                    Some(j) => j.into_justification(GRANDPA_ENGINE_ID),
+                    None => None
+                };
+
+                HeaderToSync {
+                    header: b.block.block.header.clone(),
+                    justification: justifications,
+                }
             })
             .collect();
 
