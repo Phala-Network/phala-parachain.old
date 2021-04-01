@@ -273,7 +273,19 @@ pub async fn start_node(
 		polkadot_config,
 		id,
 		validator,
-		|_| Default::default(),
+		|client| {
+			use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApi};
+
+			let mut io = jsonrpc_core::IoHandler::default();
+
+			io.extend_with(
+				TransactionPaymentApi::to_delegate(
+					TransactionPayment::new(client.clone())
+				)
+			);
+
+			io
+		},
 	)
 		.await
 }

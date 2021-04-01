@@ -22,8 +22,8 @@ serde = { version = "1.0.119", features = ["derive"] }
 hex-literal = "0.3.1"
 
 # Parachain dependencies
-parachain-runtime = { package = "phala-parachain-runtime", path = "runtime" }
-parachain-primitives = { package = "phala-parachain-primitives", path = "primitives" }
+parachain-runtime = { path = "runtime", package = "phala-parachain-runtime" }
+parachain-primitives = { path = "primitives", package = "phala-parachain-primitives" }
 
 # Substrate dependencies
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
@@ -54,6 +54,8 @@ sp-offchain = { git = "https://github.com/paritytech/substrate", branch = "rococ
 
 # RPC related dependencies
 jsonrpc-core = "15.1.0"
+sc-rpc-api = {git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
+pallet-transaction-payment-rpc = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
 
 # Cumulus dependencies
 cumulus-client-cli = { git = "https://github.com/paritytech/cumulus", branch = "rococo-v1" }
