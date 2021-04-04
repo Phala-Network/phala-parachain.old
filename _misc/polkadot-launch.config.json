@@ -6,7 +6,8 @@
 			{
 				"name": "alice",
 				"wsPort": 9944,
-				"port": 30333
+				"port": 30333,
+				"flags": ["--rpc-cors=all"]
 			},
 			{
 				"name": "bob",
@@ -29,7 +30,10 @@
 			"port": 34333,
 			"balance": "1000000000000000000000",
 			"flags": [
+				"--rpc-cors=all",
+				"--pruning=archive",
 				"--",
+				"--pruning=archive",
 				"--execution=wasm", "-lruntime=debug", "RUST_BACKTRACE=verbose"
 			]
 		},
@@ -41,7 +45,10 @@
 			"port": 35333,
 			"balance": "1000000000000000000000",
 			"flags": [
+				"--rpc-cors=all",
+				"--pruning=archive",
 				"--",
+				"--pruning=archive",
 				"--execution=wasm", "-lruntime=debug", "RUST_BACKTRACE=verbose"
 			]
 		}
