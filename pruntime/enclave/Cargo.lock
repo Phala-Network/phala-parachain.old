@@ -1752,7 +1752,7 @@ checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 [[package]]
 name = "polkadot-core-primitives"
 version = "0.7.30"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#91f40ed89fc10a4cb1fb4aab8bfa426377d2bca3"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#00000c3d8b08b42f94e12b1e40323771a68bc8f8"
 dependencies = [
  "parity-scale-codec",
  "sp-core",
@@ -1763,7 +1763,7 @@ dependencies = [
 [[package]]
 name = "polkadot-parachain"
 version = "0.8.29"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#91f40ed89fc10a4cb1fb4aab8bfa426377d2bca3"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#00000c3d8b08b42f94e12b1e40323771a68bc8f8"
 dependencies = [
  "derive_more",
  "parity-scale-codec",
@@ -1777,7 +1777,7 @@ dependencies = [
 [[package]]
 name = "polkadot-primitives"
 version = "0.8.29"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#91f40ed89fc10a4cb1fb4aab8bfa426377d2bca3"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#00000c3d8b08b42f94e12b1e40323771a68bc8f8"
 dependencies = [
  "bitvec",
  "frame-system",
@@ -3287,7 +3287,7 @@ checksum = "85e60b0d1b5f99db2556934e21937020776a5d31520bf169e851ac44e6420214"
 [[package]]
 name = "xcm"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#91f40ed89fc10a4cb1fb4aab8bfa426377d2bca3"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#00000c3d8b08b42f94e12b1e40323771a68bc8f8"
 dependencies = [
  "parity-scale-codec",
 ]
@@ -3295,7 +3295,7 @@ dependencies = [
 [[package]]
 name = "xcm-builder"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#91f40ed89fc10a4cb1fb4aab8bfa426377d2bca3"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#00000c3d8b08b42f94e12b1e40323771a68bc8f8"
 dependencies = [
  "frame-support",
  "parity-scale-codec",
@@ -3311,7 +3311,7 @@ dependencies = [
 [[package]]
 name = "xcm-executor"
 version = "0.8.22"
-source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#91f40ed89fc10a4cb1fb4aab8bfa426377d2bca3"
+source = "git+https://github.com/paritytech/polkadot?branch=rococo-v1#00000c3d8b08b42f94e12b1e40323771a68bc8f8"
 dependencies = [
  "frame-support",
  "impl-trait-for-tuples",
