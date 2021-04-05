@@ -147,6 +147,19 @@ pub fn run() -> Result<()> {
 	match &cli.subcommand {
 		Some(Subcommand::BuildSpec(cmd)) => {
 			let runner = cli.create_runner(cmd)?;
+
+			// Ref: https://github.com/paritytech/substrate/blob/master/client/cli/src/config.rs#L475
+			let chain_spec = load_spec(
+				&cmd.shared_params.chain.clone().unwrap_or_default(),
+				cmd.parachain_id.unwrap_or(30).into()
+			)?;
+
+			runner.sync_run(|config| {
+				cmd.run(chain_spec, config.network)
+			})
+		}
+		Some(Subcommand::OriginBuildSpec(cmd)) => {
+			let runner = cli.create_runner(cmd)?;
 			runner.sync_run(|config| cmd.run(config.chain_spec, config.network))
 		}
 		Some(Subcommand::CheckBlock(cmd)) => {

@@ -15,6 +15,7 @@
 // along with Cumulus.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::chain_spec;
+use crate::commands::BuildSpecCmd;
 use sc_cli;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -31,7 +32,10 @@ pub enum Subcommand {
 	ExportGenesisWasm(ExportGenesisWasmCommand),
 
 	/// Build a chain specification.
-	BuildSpec(sc_cli::BuildSpecCmd),
+	BuildSpec(BuildSpecCmd),
+
+	/// Build a chain specification (original version).
+	OriginBuildSpec(sc_cli::BuildSpecCmd),
 
 	/// Validate blocks.
 	CheckBlock(sc_cli::CheckBlockCmd),
