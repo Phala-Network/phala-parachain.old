@@ -110,7 +110,7 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("phala-collator"),
 	impl_name: create_runtime_str!("phala-collator"),
 	authoring_version: 1,
-	spec_version: 3,
+	spec_version: 1,
 	impl_version: 1,
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
@@ -285,7 +285,7 @@ impl frame_system::Config for Runtime {
 	type BlockWeights = RuntimeBlockWeights;
 	type BlockLength = RuntimeBlockLength;
 	type SS58Prefix = SS58Prefix;
-	type OnSetCode = ParachainSystem;
+	type OnSetCode = cumulus_pallet_parachain_system::ParachainSetCode<Self>;
 }
 
 impl pallet_utility::Config for Runtime {
