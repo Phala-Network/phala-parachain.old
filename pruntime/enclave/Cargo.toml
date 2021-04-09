@@ -46,7 +46,7 @@ lazy_static = { version = "*", default-features = false, features = ["spin_no_st
 sp-io                = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 sp-runtime           = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
-parity-scale-codec   = { package = "parity-scale-codec", version = "2.0.0", default-features = false, features = ["derive"] }
+parity-scale-codec   = { package = "parity-scale-codec", version = "2.1.0", default-features = false, features = ["derive"] }
 
 # Phala specific
 runtime = { path = "../../collator/runtime", default-features = false, package = "phala-parachain-runtime" }

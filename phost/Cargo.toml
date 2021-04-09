@@ -19,7 +19,7 @@ rand = "0.7"
 bytes = "0.5"
 structopt = { version = "0.3" }
 
-codec = { package = 'parity-scale-codec', version = "2.0.0" }
+codec = { package = 'parity-scale-codec', version = "2.1.0" }
 subxt = { path = "../vendor/subxt", package = "substrate-subxt" }
 system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", package = "frame-system" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1" }
