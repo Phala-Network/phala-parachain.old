@@ -42,6 +42,11 @@
     "round": "u32",
     "startBlock": "BlockNumber"
   },
+  "StashWorkerStats": {
+    "slash": "Balance",
+    "compute_received": "Balance",
+    "online_received": "Balance"
+  },
   "RoundStats": {
     "round": "u32",
     "onlineWorkers": "u32",
