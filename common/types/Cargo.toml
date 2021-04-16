@@ -10,7 +10,6 @@ codec = { package = "parity-scale-codec", version = "2.1.0", default-features = 
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, optional = true }
 
-xcm-transactor = {path = "../../collator/pallets/xcm-transactor", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "rococo-v1" }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus",  default-features = false, branch = "rococo-v1" }
 
@@ -20,10 +19,15 @@ std = [
     "serde/std",
     "codec/std",
     "sp-core/full_crypto",
+    "sp-runtime/std",
+    "xcm/std",
+    "cumulus-primitives-core/std"
 ]
 enable_serde = [
 	"serde/derive",
-	"serde/alloc"
+	"serde/alloc",
+    "sp-core/serde",
+    "sp-runtime/serde",
 ]
 pruntime = [
 	"sp-runtime"

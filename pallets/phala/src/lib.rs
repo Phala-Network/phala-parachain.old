@@ -14,10 +14,11 @@ use frame_support::{
 		Currency, ExistenceRequirement::AllowDeath, Get, Imbalance, OnUnbalanced, Randomness,
 		UnixTime,
 	},
+	PalletId
 };
 use sp_runtime::{
 	traits::{AccountIdConversion, One, Zero},
-	ModuleId, Permill, SaturatedConversion,
+	Permill, SaturatedConversion,
 };
 
 #[macro_use]
@@ -35,8 +36,8 @@ use types::{
 	WorkerMessagePayload, WorkerStateEnum, TransferTokenData, TransferXTokenData,
 };
 use cumulus_primitives_core::ParaId;
-use xcm::v0::{ExecuteXcm, Junction, MultiAsset, NetworkId, Order, Xcm};
-use xcm_executor::traits::LocationConversion;
+use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm};
+use xcm_executor::traits::Convert;
 
 // constants
 mod constants;
@@ -88,8 +89,8 @@ pub trait Config: frame_system::Config {
 	type OfflineReportReward: Get<BalanceOf<Self>>;
 
 	// Crosschain
-	type XcmExecutor: ExecuteXcm;
-	type AccountIdConverter: LocationConversion<Self::AccountId>;
+	type XcmExecutor: ExecuteXcm<Self>;
+	type LocationToAccountId: Convert<MultiLocation, Self::AccountId>;
 }
 
 decl_storage! {
@@ -836,8 +837,8 @@ decl_module! {
 				transfer_data.data.amount
 			).unwrap();
 			let xcm_origin =
-			T::AccountIdConverter::try_into_location(who.clone()).map_err(|_| Error::<T>::BadXCMLocation)?;
-			match T::XcmExecutor::execute_xcm(xcm_origin, xcm) {
+			T::LocationToAccountId::convert_ref(who.clone()).map_err(|_| Error::<T>::BadXCMLocation)?;
+			match T::XcmExecutor::execute_xcm(xcm_origin, xcm, 50) {
 				Ok(_) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
 				Err(_err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
 			}
@@ -1448,7 +1449,7 @@ impl<T: Config> Module<T> {
         dest_account: T::AccountId,
         dest_network: NetworkId,
         amount: BalanceOf<T>
-    ) -> Option<Xcm> {
+    ) -> Option<Xcm<T>> {
         use parachain_utils::AssetLocation;
         use sp_std::convert::TryFrom;
         // only support transfer parachain reserve token back to it's origin netowrk

@@ -1,3 +1,5 @@
+#![feature(associated_type_defaults)]
+
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use frame_support::{
@@ -21,8 +23,9 @@ use codec::{Decode, Encode};
 use cumulus_primitives_core::ParaId;
 use xcm::v0::{Error, Junction, MultiAsset, MultiLocation, Result};
 use xcm_executor::traits::{
-    FilterAssetLocation, LocationConversion, MatchesFungible, NativeAsset, TransactAsset,
+    FilterAssetLocation, MatchesFungible, TransactAsset,
 };
+use xcm_builder::{ParentIsDefault, SiblingParachainConvertsVia, AccountId32Aliases, NativeAsset};
 
 use parachain_utils as utils;
 
@@ -35,11 +38,27 @@ pub enum ChainId {
     ParaChain(ParaId),
 }
 
+pub type AccountId = <T as frame_system::Config>::AccountId;
+
 type BalanceOf<T> =
     <<T as Config>::OwnedCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 /// Configuration trait of this pallet.
 pub trait Config: frame_system::Config {
+    type AccountId = <T as frame_system::Config>::AccountId;
+
+    /// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
+    /// when determining ownership of accounts for asset transacting and when attempting to use XCM
+    /// `Transact` in order to determine the dispatch Origin.
+    type LocationToAccountId = (
+        // The parent (Relay-chain) origin converts to the default `AccountId`.
+        ParentIsDefault<AccountId>,
+        // Sibling parachain origins convert to AccountId via the `ParaId::into`.
+        SiblingParachainConvertsVia<Sibling, AccountId>,
+        // Straight up local `AccountId32` origins just alias directly to `AccountId`.
+        AccountId32Aliases<RococoNetwork, AccountId>,
+    );
+
     /// Event type used by the runtime.
     type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
     type Matcher: MatchesFungible<BalanceOf<Self>>;
