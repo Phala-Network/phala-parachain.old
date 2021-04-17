@@ -88,8 +88,8 @@ pub trait Config: frame_system::Config {
 	type OfflineOffenseSlash: Get<BalanceOf<Self>>;
 	type OfflineReportReward: Get<BalanceOf<Self>>;
 
-	// Crosschain
-	type XcmExecutor: ExecuteXcm<Self>;
+	// Cross-chain
+	type XcmExecutor: ExecuteXcm<Self::Call>;
 	type LocationToAccountId: Convert<MultiLocation, Self::AccountId>;
 }
 
@@ -837,7 +837,7 @@ decl_module! {
 				transfer_data.data.amount
 			).unwrap();
 			let xcm_origin = T::LocationToAccountId::reverse_ref(&who).map_err(|_| Error::<T>::BadXCMLocation)?;
-			// TODO: examine the last parameter `weight_limit` 
+			// TODO: examine the last parameter `weight_limit`
 			match T::XcmExecutor::execute_xcm(xcm_origin, xcm, 50) {
 				Outcome::Complete(_weight) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
 				Outcome::Incomplete(_, _err) | Outcome::Error(_err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
@@ -1449,7 +1449,7 @@ impl<T: Config> Module<T> {
         dest_account: T::AccountId,
         dest_network: NetworkId,
         amount: BalanceOf<T>
-    ) -> Option<Xcm<T>> {
+    ) -> Option<Xcm<T::Call>> {
         use parachain_utils::AssetLocation;
         use sp_std::convert::TryFrom;
         // only support transfer parachain reserve token back to it's origin netowrk

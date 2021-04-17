@@ -52,7 +52,7 @@ use sp_version::RuntimeVersion;
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, parameter_types, RuntimeDebug,
-	StorageValue,
+	StorageValue, PalletId,
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		DispatchClass, IdentityFee, Weight,
@@ -60,9 +60,9 @@ pub use frame_support::{
 	traits::{
 		Currency, Imbalance, KeyOwnerProofSystem, OnUnbalanced, Randomness, LockIdentifier,
 		U128CurrencyToVote, IsInVec, All,
+		InstanceFilter
 	}
 };
-use frame_support::traits::InstanceFilter;
 use frame_system::{
 	EnsureRoot, EnsureOneOf,
 	limits::{BlockLength, BlockWeights},
@@ -74,7 +74,6 @@ pub use pallet_timestamp::Call as TimestampCall;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{
 	Perbill, Permill, Percent, Perquintill,
-	ModuleId,
 };
 
 // Constant values used within the runtime.
@@ -190,7 +189,7 @@ construct_runtime! {
 
 		// Phala pallets
 		Phala: pallet_phala::{Pallet, Call, Config<T>, Storage, Event<T>},
-		PhalaXcmTransactor: xcm_transactor::{Pallet, Call, Event<T>},
+		// PhalaXcmTransactor: xcm_transactor::{Pallet, Call, Event<T>},
 		MiningStaking: pallet_mining_staking::{Pallet, Call, Storage, Event<T>},
 		PhaClaim: pallet_claim::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
 	}
@@ -530,13 +529,13 @@ impl pallet_vesting::Config for Runtime {
 }
 
 parameter_types! {
-	pub const LotteryModuleId: ModuleId = ModuleId(*b"py/lotto");
+	pub const LotteryPalletId: PalletId = PalletId(*b"py/lotto");
 	pub const MaxCalls: usize = 10;
 	pub const MaxGenerateRandom: u32 = 10;
 }
 
 impl pallet_lottery::Config for Runtime {
-	type ModuleId = LotteryModuleId;
+	type PalletId = LotteryPalletId;
 	type Call = Call;
 	type Event = Event;
 	type Currency = Balances;
@@ -574,8 +573,8 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 impl parachain_info::Config for Runtime {}
 
 parameter_types! {
-	pub const Location: MultiLocation = MultiLocation::X1(Junction::Parent);
-	pub Network: NetworkId = NetworkId::Named("phala".into());
+	pub const RelayChainLocation: MultiLocation = MultiLocation::X1(Junction::Parent);
+	pub RelayChainNetwork: NetworkId = NetworkId::Polkadot;
 	pub RelayChainOrigin: Origin = cumulus_pallet_xcm::Origin::Relay.into();
 	pub Ancestry: MultiLocation = Junction::Parachain {
 		id: ParachainInfo::parachain_id().into()
@@ -591,7 +590,7 @@ pub type LocationToAccountId = (
 	// Sibling parachain origins convert to AccountId via the `ParaId::into`.
 	SiblingParachainConvertsVia<Sibling, AccountId>,
 	// Straight up local `AccountId32` origins just alias directly to `AccountId`.
-	AccountId32Aliases<RococoNetwork, AccountId>,
+	AccountId32Aliases<RelayChainNetwork, AccountId>,
 );
 
 // pub type LocalAssetTransactor = PhalaXcmTransactor;
@@ -601,7 +600,7 @@ pub type LocalAssetTransactor = CurrencyAdapter<
 	// Use this currency:
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RococoLocation>,
+	IsConcrete<RelayChainLocation>,
 	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
@@ -627,7 +626,7 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	ParentAsSuperuser<Origin>,
 	// Native signed account converter; this just converts an `AccountId32` origin into a normal
 	// `Origin::Signed` origin of the same 32-byte value.
-	SignedAccountId32AsNative<RococoNetwork, Origin>,
+	SignedAccountId32AsNative<RelayChainNetwork, Origin>,
 );
 
 parameter_types! {
@@ -655,7 +654,7 @@ impl Config for XcmConfig {
 	type AssetTransactor = LocalAssetTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	type IsReserve = NativeAsset;
-	type IsTeleporter = NativeAsset;	// <- should be enough to allow teleportation of ROC
+	type IsTeleporter = NativeAsset; // <- should be enough to allow teleportation of ROC
 	type LocationInverter = LocationInverter<Ancestry>;
 	type Barrier = Barrier;
 	type Weigher = FixedWeightBounds<UnitWeightCost, Call>;
@@ -766,7 +765,7 @@ parameter_types! {
 	pub const DataDepositPerByte: Balance = 1 * CENTS;
 	pub const BountyDepositBase: Balance = 1 * DOLLARS;
 	pub const BountyDepositPayoutDelay: BlockNumber = 1 * DAYS;
-	pub const TreasuryModuleId: ModuleId = ModuleId(*b"py/trsry");
+	pub const TreasuryPalletId: PalletId = PalletId(*b"py/trsry");
 	pub const BountyUpdatePeriod: BlockNumber = 14 * DAYS;
 	pub const MaximumReasonLength: u32 = 16384;
 	pub const BountyCuratorDeposit: Permill = Permill::from_percent(50);
@@ -774,7 +773,7 @@ parameter_types! {
 }
 
 impl pallet_treasury::Config for Runtime {
-	type ModuleId = TreasuryModuleId;
+	type PalletId = TreasuryPalletId;
 	type Currency = Balances;
 	type ApproveOrigin = EnsureOneOf<
 		AccountId,
@@ -892,7 +891,7 @@ impl pallet_phala::Config for Runtime {
 	type OfflineOffenseSlash = OfflineOffenseSlash;
 	type OfflineReportReward = OfflineReportReward;
 
-	type XcmConfig = XcmConfig;
+	// type XcmConfig = XcmConfig;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type LocationToAccountId = LocationToAccountId;
 }
