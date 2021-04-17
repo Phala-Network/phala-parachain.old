@@ -91,7 +91,8 @@ use xcm_builder::{
 	AllowUnpaidExecutionFrom, ParentAsSuperuser,
 };
 use xcm_executor::{Config, XcmExecutor};
-// use xcm_transactor::{AnyLocationFilter, ConcreteMatcher};
+// Custom XCM Transactor
+mod xcm_transactor;
 
 pub type SessionHandlers = ();
 
@@ -186,10 +187,10 @@ construct_runtime! {
 		XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Call, Storage, Event<T>},
 		PolkadotXcm: pallet_xcm::{Pallet, Call, Event<T>, Origin},
 		CumulusXcm: cumulus_pallet_xcm::{Pallet, Origin},
+		XcmTransactor: xcm_transactor::{Pallet, Call, Event<T>},
 
 		// Phala pallets
 		Phala: pallet_phala::{Pallet, Call, Config<T>, Storage, Event<T>},
-		// PhalaXcmTransactor: xcm_transactor::{Pallet, Call, Event<T>},
 		MiningStaking: pallet_mining_staking::{Pallet, Call, Storage, Event<T>},
 		PhaClaim: pallet_claim::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
 	}
@@ -694,13 +695,13 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type ChannelInfo = ParachainSystem;
 }
 
-// impl xcm_transactor::Config for Runtime {
-// 	type Event = Event;
-// 	type Matcher = ConcreteMatcher<Location>;
-// 	type AccountIdConverter = LocationToAccountId;
-// 	type OwnedCurrency = Balances;
-// 	type ParaId = ParachainInfo;
-// }
+impl xcm_transactor::Config for Runtime {
+	type Event = Event;
+	type Matcher = xcm_transactor::ConcreteMatcher<RelayChainLocation>;
+	type AccountIdConverter = LocationToAccountId;
+	type OwnedCurrency = Balances;
+	type ParaId = ParachainInfo;
+}
 
 parameter_types! {
 	pub const CouncilMotionDuration: BlockNumber = 5 * DAYS;
@@ -893,7 +894,7 @@ impl pallet_phala::Config for Runtime {
 
 	// type XcmConfig = XcmConfig;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type LocationToAccountId = LocationToAccountId;
+	type AccountIdConverter = LocationToAccountId;
 }
 
 impl pallet_claim::Config for Runtime {

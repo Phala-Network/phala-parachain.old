@@ -35,36 +35,9 @@
 				"--pruning=archive",
 				"--execution=wasm", "-lruntime=debug", "RUST_BACKTRACE=verbose"
 			]
-		},
-		{
-			"bin": "./bin/collator",
-			"chain": "local",
-			"wsPort": 9544,
-			"port": 35333,
-			"balance": "1000000000000000000000",
-			"flags": [
-				"--rpc-cors=all",
-				"--pruning=archive",
-				"--",
-				"--pruning=archive",
-				"--execution=wasm", "-lruntime=debug", "RUST_BACKTRACE=verbose"
-			]
 		}
 	],
 	"simpleParachains": [],
-	"hrmpChannels": [
-		{
-			"sender": "30",
-			"recipient": "100",
-			"maxCapacity": 8,
-			"maxMessageSize": 512
-		},
-		{
-			"sender": "100",
-			"recipient": "30",
-			"maxCapacity": 8,
-			"maxMessageSize": 512
-		}
-	],
+	"hrmpChannels": [],
 	"types": {}
 }

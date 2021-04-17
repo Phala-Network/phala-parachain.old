@@ -5744,6 +5744,7 @@ dependencies = [
  "pallet-utility",
  "pallet-vesting",
  "pallet-xcm",
+ "parachain-utils",
  "parity-scale-codec",
  "phala-parachain-info",
  "phala-parachain-primitives",

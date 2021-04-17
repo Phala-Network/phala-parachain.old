@@ -90,7 +90,7 @@ pub trait Config: frame_system::Config {
 
 	// Cross-chain
 	type XcmExecutor: ExecuteXcm<Self::Call>;
-	type LocationToAccountId: Convert<MultiLocation, Self::AccountId>;
+	type AccountIdConverter: Convert<MultiLocation, Self::AccountId>;
 }
 
 decl_storage! {
@@ -836,7 +836,7 @@ decl_module! {
 				transfer_data.data.dest_network,
 				transfer_data.data.amount
 			).unwrap();
-			let xcm_origin = T::LocationToAccountId::reverse_ref(&who).map_err(|_| Error::<T>::BadXCMLocation)?;
+			let xcm_origin = T::AccountIdConverter::reverse_ref(&who).map_err(|_| Error::<T>::BadXCMLocation)?;
 			// TODO: examine the last parameter `weight_limit`
 			match T::XcmExecutor::execute_xcm(xcm_origin, xcm, 50) {
 				Outcome::Complete(_weight) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
