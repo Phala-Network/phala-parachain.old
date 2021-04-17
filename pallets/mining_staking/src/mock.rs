@@ -121,7 +121,7 @@ impl pallet_phala::Config for Test {
 	type OfflineReportReward = OfflineReportReward;
 
 	type XcmExecutor = ();
-	type LocationToAccountId = ();
+	type AccountIdConverter = ();
 }
 
 impl mining_staking::Config for Test {

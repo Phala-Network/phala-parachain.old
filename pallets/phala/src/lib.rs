@@ -3,6 +3,7 @@ extern crate alloc;
 use sp_core::U256;
 use sp_std::prelude::*;
 use sp_std::{cmp, vec, convert::TryInto};
+use sp_std::convert::TryFrom;
 
 use frame_support::{fail, decl_error, decl_event, decl_module, decl_storage, dispatch, ensure};
 use frame_system::{ensure_root, ensure_signed, Pallet as System};
@@ -14,7 +15,7 @@ use frame_support::{
 		Currency, ExistenceRequirement::AllowDeath, Get, Imbalance, OnUnbalanced, Randomness,
 		UnixTime,
 	},
-	PalletId
+	PalletId,
 };
 use sp_runtime::{
 	traits::{AccountIdConversion, One, Zero},
@@ -32,7 +33,7 @@ pub mod weights;
 extern crate phala_types as types;
 use types::{
 	BlockRewardInfo, MinerStatsDelta, PRuntimeInfo, PayoutPrefs, PayoutReason, RoundInfo,
-	RoundStats, Score, SignedDataType, SignedWorkerMessage, StashInfo, TransferData, WorkerInfo,
+	RoundStats, Score, StashWorkerStats, SignedDataType, SignedWorkerMessage, StashInfo, TransferData, WorkerInfo,
 	WorkerMessagePayload, WorkerStateEnum, TransferTokenData, TransferXTokenData,
 };
 use cumulus_primitives_core::ParaId;
@@ -142,6 +143,8 @@ decl_storage! {
 		WorkerComputeReward: map hasher(twox_64_concat) T::AccountId => u32;
 		PayoutComputeReward: map hasher(twox_64_concat) T::AccountId => u32;
 
+		RoundWorkerStats get(fn round_worker_stats): map hasher(twox_64_concat) T::AccountId => StashWorkerStats<BalanceOf<T>>;
+
 		// Round management
 		/// The current mining round id
 		Round get(fn round): RoundInfo<T::BlockNumber>;
@@ -231,9 +234,6 @@ decl_event!(
 		AccountId = <T as frame_system::Config>::AccountId,
 		Balance = BalanceOf<T>,
 	{
-		// Debug events
-		LogString(Vec<u8>),
-		LogI32(i32),
 		// Chain events
 		CommandPushed(AccountId, u32, Vec<u8>, u64),
 		TransferToTee(AccountId, Balance),
@@ -423,7 +423,7 @@ decl_module! {
 			ensure!(Stash::<T>::contains_key(&who), Error::<T>::NotController);
 			let stash = Stash::<T>::get(&who);
 			// Validate report
-			let sig_cert = webpki::EndEntityCert::from(&raw_signing_cert);
+			let sig_cert = webpki::EndEntityCert::try_from(&raw_signing_cert[..]);
 			ensure!(sig_cert.is_ok(), Error::<T>::InvalidIASSigningCert);
 			let sig_cert = sig_cert.unwrap();
 			let verify_result = sig_cert.verify_signature(
@@ -433,7 +433,7 @@ decl_module! {
 			);
 			ensure!(verify_result.is_ok(), Error::<T>::InvalidIASSigningCert);
 
-			let now = T::UnixTime::now().as_millis().saturated_into::<u64>();
+			let now = T::UnixTime::now().as_secs().saturated_into::<u64>();
 
 			// Validate certificate
 			let chain: Vec<&[u8]> = Vec::new();
@@ -638,7 +638,7 @@ decl_module! {
 						Some(score) => score.overall_score,
 						None => 0
 					};
-					Self::add_heartbeat(&who, block_num.into());
+					Self::add_heartbeat(&stash, block_num.into());
 					Self::handle_claim_reward(
 						&stash, &stash_info.payout_prefs.target, claim_online, claim_compute,
 						score, block_num.into());
@@ -785,6 +785,8 @@ decl_module! {
 			Ok(())
 		}
 
+		// Cross chain
+
 		#[weight = 0]
 		fn transfer_token_to_tee(origin, token_id: Vec<u8>, #[compact] amount: BalanceOf<T>) -> dispatch::DispatchResult {
 			let who = ensure_signed(origin)?;
@@ -863,7 +865,6 @@ impl<T: Config> Module<T> {
 		serialized_pk: &Vec<u8>,
 		data: &impl SignedDataType<Vec<u8>>,
 	) -> dispatch::DispatchResult {
-		use sp_std::convert::TryFrom;
 		ensure!(serialized_pk.len() == 33, Error::<T>::InvalidPubKey);
 		let pubkey = sp_core::ecdsa::Public::try_from(serialized_pk.as_slice())
 			.map_err(|_| Error::<T>::InvalidPubKey)?;
@@ -980,7 +981,7 @@ impl<T: Config> Module<T> {
 				machine_id: machine_id.clone(), // should not change, but we set it anyway
 				pubkey: pubkey.clone(),         // could change if the worker forgot the identity
 				last_updated,
-				score,	// could change if we do profiling
+				score,    // could change if we do profiling
 				confidence_level, // could change on redo RA
 				runtime_version, // could change on redo RA
 				..info  // keep .state
@@ -1050,8 +1051,17 @@ impl<T: Config> Module<T> {
 		// TODO: what if the worker suddently change its payout address?
 		// Not necessary a problem on PoC-3 testnet, because it's unwise to switch the payout
 		// address in anyway. On mainnet, we should slash the stake instead.
-		Self::try_sub_fire(&payout, lost_amount);
+		let to_sub = Self::try_sub_fire(&payout, lost_amount);
 		Self::add_fire(reporter, win_amount);
+
+		let prev = RoundWorkerStats::<T>::get(&stash);
+		let worker_state = StashWorkerStats {
+			slash: prev.slash + to_sub,
+			compute_received: prev.compute_received,
+			online_received: prev.online_received,
+		};
+		RoundWorkerStats::<T>::insert(&stash, worker_state);
+
 		Self::deposit_event(RawEvent::Slash(
 			stash.clone(),
 			payout.clone(),
@@ -1225,6 +1235,7 @@ impl<T: Config> Module<T> {
 			start_block: new_block,
 		});
 		Self::update_round_stats(new_round, new_online, compute_workers, new_total_power);
+		RoundWorkerStats::<T>::remove_all();
 		Self::deposit_event(RawEvent::NewMiningRound(new_round));
 	}
 
@@ -1299,7 +1310,14 @@ impl<T: Config> Module<T> {
 						round_stats.frac_target_online_reward,
 						round_stats.online_workers,
 					);
-					Self::payout(online, payout_target, PayoutReason::OnlineReward);
+					let coin_reward = Self::payout(online, payout_target, PayoutReason::OnlineReward);
+					let prev = RoundWorkerStats::<T>::get(&stash);
+					let worker_state = StashWorkerStats {
+						slash: prev.slash,
+						compute_received: prev.compute_received,
+						online_received: prev.online_received + coin_reward,
+					};
+					RoundWorkerStats::<T>::insert(&stash, worker_state);
 				}
 				// Adjusted compute worker reward
 				if claim_compute {
@@ -1308,7 +1326,15 @@ impl<T: Config> Module<T> {
 						round_stats.frac_target_compute_reward,
 						round_stats.compute_workers,
 					);
-					Self::payout(compute, payout_target, PayoutReason::ComputeReward);
+					let coin_reward = Self::payout(compute, payout_target, PayoutReason::ComputeReward);
+					let prev = RoundWorkerStats::<T>::get(&stash);
+					let worker_state = StashWorkerStats {
+						slash: prev.slash,
+						compute_received: prev.compute_received + coin_reward,
+						online_received: prev.online_received,
+					};
+					RoundWorkerStats::<T>::insert(&stash, worker_state);
+
 					// TODO: remove after PoC-3
 					WorkerComputeReward::<T>::mutate(stash, |x| *x += 1);
 					PayoutComputeReward::<T>::mutate(payout_target, |x| *x += 1);
@@ -1336,8 +1362,8 @@ impl<T: Config> Module<T> {
 	fn round_mining_reward_at(_blocknum: T::BlockNumber) -> BalanceOf<T> {
 		let initial_reward: BalanceOf<T> = T::InitialReward::get()
 			/ BalanceOf::<T>::from(
-				(T::DecayInterval::get() / T::RoundInterval::get()).saturated_into::<u32>(),
-			);
+			(T::DecayInterval::get() / T::RoundInterval::get()).saturated_into::<u32>(),
+		);
 		// BalanceOf::<T>::from();
 		let round_reward = initial_reward;
 		// TODO: consider the halvings
@@ -1415,7 +1441,7 @@ impl<T: Config> Module<T> {
 	}
 
 	/// Actually pays out the reward
-	fn payout(value: BalanceOf<T>, target: &T::AccountId, reason: PayoutReason) {
+	fn payout(value: BalanceOf<T>, target: &T::AccountId, reason: PayoutReason) -> BalanceOf<T> {
 		// Retion the reward and the treasury deposit
 		let coins = T::TEECurrency::issue(value);
 		let (coin_reward, coin_treasury) =
@@ -1430,6 +1456,7 @@ impl<T: Config> Module<T> {
 		));
 		Self::add_fire(&target, coin_reward.peek());
 		T::Treasury::on_unbalanced(coin_treasury);
+		coin_reward.peek()
 	}
 
 	fn add_fire(dest: &T::AccountId, amount: BalanceOf<T>) {
@@ -1437,64 +1464,64 @@ impl<T: Config> Module<T> {
 		AccumulatedFire2::<T>::mutate(|x| *x += amount);
 	}
 
-	fn try_sub_fire(dest: &T::AccountId, amount: BalanceOf<T>) {
+	fn try_sub_fire(dest: &T::AccountId, amount: BalanceOf<T>) -> BalanceOf<T> {
 		let to_sub = cmp::min(amount, Fire2::<T>::get(dest));
 		Fire2::<T>::mutate(dest, |x| *x -= to_sub);
 		AccumulatedFire2::<T>::mutate(|x| *x -= to_sub);
+		to_sub
 	}
 
-    fn build_xtoken_transfering_xcm(
-        currency_id: &Vec<u8>,
-        dest_paraid: ParaId,
-        dest_account: T::AccountId,
-        dest_network: NetworkId,
-        amount: BalanceOf<T>
-    ) -> Option<Xcm<T::Call>> {
-        use parachain_utils::AssetLocation;
-        use sp_std::convert::TryFrom;
-        // only support transfer parachain reserve token back to it's origin netowrk
+	fn build_xtoken_transfering_xcm(
+		currency_id: &Vec<u8>,
+		dest_paraid: ParaId,
+		dest_account: T::AccountId,
+		dest_network: NetworkId,
+		amount: BalanceOf<T>
+	) -> Option<Xcm<T::Call>> {
+		use parachain_utils::AssetLocation;
+		// only support transfer parachain reserve token back to it's origin netowrk
 
-        let location = parachain_utils::from_encoded_asset_id(&currency_id)
-            .expect("Error while decoding currency_id; qed.");
+		let location = parachain_utils::from_encoded_asset_id(&currency_id)
+			.expect("Error while decoding currency_id; qed.");
 
-        let encoded_account = Encode::encode(&dest_account);
-        let dest = if encoded_account.len() == 32 {
-            Junction::AccountId32 {
-                network: dest_network,
-                id: encoded_account.try_into().map_err(|_| Error::<T>::FailedToBuildXCM).ok()?,
-            }
-                .into()
-        } else {
-            Junction::GeneralKey(encoded_account).into()
-        };
+		let encoded_account = Encode::encode(&dest_account);
+		let dest = if encoded_account.len() == 32 {
+			Junction::AccountId32 {
+				network: dest_network,
+				id: encoded_account.try_into().map_err(|_| Error::<T>::FailedToBuildXCM).ok()?,
+			}
+				.into()
+		} else {
+			Junction::GeneralKey(encoded_account).into()
+		};
 
-        match parachain_utils::AssetLocation::try_from(&location)
-            .expect("Error while matching asset location; qed.") {
-            AssetLocation::Parachain(reserve_chain) => {
-                if ParaId::from(reserve_chain) != dest_paraid {
-                    panic!("Must transfer back to the reserve chain; qed.");
-                }
-                Some(Xcm::WithdrawAsset {
-                    assets: vec![MultiAsset::ConcreteFungible {
-                        id: location,
-                        amount: amount.saturated_into(),
-                    }],
-                    effects: vec![Order::InitiateReserveWithdraw {
-                        assets: vec![MultiAsset::All],
-                        reserve: (Junction::Parent, Junction::Parachain {
-                            id: reserve_chain.into(),
-                        })
-                            .into(),
-                        effects: vec![Order::DepositAsset {
-                            assets: vec![MultiAsset::All],
-                            dest,
-                        }],
-                    }],
-                })
-            },
-            _ => None,
-        }
-    }
+		match parachain_utils::AssetLocation::try_from(&location)
+			.expect("Error while matching asset location; qed.") {
+			AssetLocation::Parachain(reserve_chain) => {
+				if ParaId::from(reserve_chain) != dest_paraid {
+					panic!("Must transfer back to the reserve chain; qed.");
+				}
+				Some(Xcm::WithdrawAsset {
+					assets: vec![MultiAsset::ConcreteFungible {
+						id: location,
+						amount: amount.saturated_into(),
+					}],
+					effects: vec![Order::InitiateReserveWithdraw {
+						assets: vec![MultiAsset::All],
+						reserve: (Junction::Parent, Junction::Parachain {
+							id: reserve_chain.into(),
+						})
+							.into(),
+						effects: vec![Order::DepositAsset {
+							assets: vec![MultiAsset::All],
+							dest,
+						}],
+					}],
+				})
+			},
+			_ => None,
+		}
+	}
 }
 
 fn calc_overall_score(features: &Vec<u32>) -> Result<u32, ()> {

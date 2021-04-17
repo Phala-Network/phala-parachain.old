@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use codec::Encode;
 use frame_support::{
 	assert_noop, assert_ok, assert_err,
@@ -37,7 +39,7 @@ static SUPPORTED_SIG_ALGS: SignatureAlgorithms = &[
 	&webpki::RSA_PKCS1_3072_8192_SHA384,
 ];
 
-pub static IAS_SERVER_ROOTS: webpki::TLSServerTrustAnchors = webpki::TLSServerTrustAnchors(&[
+pub static IAS_SERVER_ROOTS: webpki::TlsServerTrustAnchors = webpki::TlsServerTrustAnchors(&[
 	/*
 	 * -----BEGIN CERTIFICATE-----
 	 * MIIFSzCCA7OgAwIBAgIJANEHdl0yo7CUMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV
@@ -114,7 +116,7 @@ fn ias_report_signing_certificate() -> Vec<u8> {
 fn test_validate_cert() {
 	let sig = ias_report_signature();
 	let sig_cert_dec = ias_report_signing_certificate();
-	let sig_cert = webpki::EndEntityCert::from(&sig_cert_dec).expect("parse sig failed");
+	let sig_cert = webpki::EndEntityCert::try_from(&sig_cert_dec[..]).expect("parse sig failed");
 
 	let chain: Vec<&[u8]> = Vec::new();
 	let now_func = webpki::Time::from_seconds_since_unix_epoch(1613312566);
@@ -140,7 +142,7 @@ fn test_register_worker() {
 
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
-		Timestamp::set_timestamp(1613315656);
+		Timestamp::set_timestamp(1613315656000);
 
 		assert_ok!(PhalaPallet::add_mrenclave(Origin::root(), MR_ENCLAVE.to_vec(), MR_SIGNER.to_vec(), ISV_PROD_ID.to_vec(), ISV_SVN.to_vec()));
 		assert_ok!(PhalaPallet::set_stash(Origin::signed(1), 1));
@@ -162,7 +164,7 @@ fn test_register_worker() {
 
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
-		Timestamp::set_timestamp(1633310550);
+		Timestamp::set_timestamp(1633310550000);
 
 		assert_ok!(PhalaPallet::add_mrenclave(Origin::root(), MR_ENCLAVE.to_vec(), MR_SIGNER.to_vec(), ISV_PROD_ID.to_vec(), ISV_SVN.to_vec()));
 		assert_ok!(PhalaPallet::set_stash(Origin::signed(1), 1));
@@ -178,7 +180,7 @@ fn test_whitelist_works() {
 	new_test_ext().execute_with(|| {
 		// Set block number to 1 to test the events
 		System::set_block_number(1);
-		Timestamp::set_timestamp(1613315656);
+		Timestamp::set_timestamp(1613315656000);
 
 		assert_ok!(PhalaPallet::set_stash(Origin::signed(1), 1));
 		assert_ok!(PhalaPallet::set_stash(Origin::signed(2), 2));
@@ -892,6 +894,90 @@ fn test_slash_verification() {
 			PhalaPallet::report_offline(Origin::signed(10), 2, 102),
 			Error::<Test>::InvalidProof
 		);
+	});
+}
+
+#[test]
+fn test_worker_slash() {
+	new_test_ext().execute_with(|| {
+		use frame_support::storage::{StorageMap};
+		System::set_block_number(1);
+
+		// Block 1: register a worker at stash1 and start mining
+		setup_test_worker(1);
+		assert_ok!(PhalaPallet::start_mining_intention(Origin::signed(1)));
+		assert_ok!(PhalaPallet::force_next_round(RawOrigin::Root.into()));
+		PhalaPallet::on_finalize(1);
+		System::finalize();
+
+		PhalaPallet::add_fire(&1, OfflineOffenseSlash::get());
+		assert_eq!(crate::Fire2::<Test>::get(1), OfflineOffenseSlash::get());
+
+		// Add a seed for block 2
+		set_block_reward_base(2, U256::MAX);
+		// 2. Time travel a few blocks later
+		System::set_block_number(15);
+		// 3. Report offline
+		assert_ok!(PhalaPallet::report_offline(Origin::signed(2), 1, 2));
+		// 4. check the StashFire WorkerSlash
+		let round_worker_stats = crate::RoundWorkerStats::<Test>::get(1);
+		assert_eq!(round_worker_stats.slash, OfflineOffenseSlash::get());
+	});
+}
+
+#[test]
+fn test_stash_fire() {
+	new_test_ext().execute_with(|| {
+		use frame_support::storage::{StorageMap, StorageValue};
+		// Set states
+		crate::WorkerState::<Test>::insert(
+			1,
+			phala_types::WorkerInfo::<BlockNumber> {
+				machine_id: Vec::new(),
+				pubkey: Vec::new(),
+				last_updated: 1,
+				state: phala_types::WorkerStateEnum::Mining(1),
+				score: None,
+				confidence_level: 1,
+				runtime_version: 0,
+			},
+		);
+		crate::Round::<Test>::put(phala_types::RoundInfo::<BlockNumber> {
+			round: 1,
+			start_block: 1,
+		});
+		crate::RoundStatsHistory::insert(
+			1,
+			phala_types::RoundStats {
+				round: 1,
+				online_workers: 1,
+				compute_workers: 1,
+				frac_target_online_reward: 333,
+				frac_target_compute_reward: 333,
+				total_power: 100,
+			},
+		);
+
+		// Check some reward (right within the window)
+		let window = PhalaPallet::reward_window();
+		System::set_block_number(1 + window);
+		PhalaPallet::handle_claim_reward(&1, &2, true, false, 100, 1);
+		assert_eq!(
+			events().as_slice(),
+			[Event::phala(RawEvent::PayoutReward(
+				2,
+				4504_504504504504,
+				1126_126126126127,
+				PayoutReason::OnlineReward
+			))]
+		);
+
+		let round_worker_stats = crate::RoundWorkerStats::<Test>::get(1);
+		assert_eq!(round_worker_stats.online_received, 4504_504504504504);
+
+		PhalaPallet::handle_claim_reward(&1, &2, false, true, 100, 1);
+		let round_worker_stats = crate::RoundWorkerStats::<Test>::get(1);
+		assert_eq!(round_worker_stats.compute_received, 7507_507507507507);	
 	});
 }
 

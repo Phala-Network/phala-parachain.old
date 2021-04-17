@@ -119,7 +119,7 @@ impl phala::Config for Test {
 	type OfflineReportReward = OfflineReportReward;
 
 	type XcmExecutor = ();
-	type LocationToAccountId = ();
+	type AccountIdConverter = ();
 }
 
 // This function basically just builds a genesis storage key/value store according to

@@ -13,7 +13,7 @@ use frame_support::{
 };
 pub use pallet::*;
 use sp_runtime::{
-	traits::{AccountIdConversion, Zero}
+	traits::{AccountIdConversion, Zero},
 };
 
 #[cfg(test)]
