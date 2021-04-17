@@ -36,7 +36,7 @@ use types::{
 	WorkerMessagePayload, WorkerStateEnum, TransferTokenData, TransferXTokenData,
 };
 use cumulus_primitives_core::ParaId;
-use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm};
+use xcm::v0::{ExecuteXcm, Junction, MultiAsset, MultiLocation, NetworkId, Order, Xcm, Outcome};
 use xcm_executor::traits::Convert;
 
 // constants
@@ -836,11 +836,11 @@ decl_module! {
 				transfer_data.data.dest_network,
 				transfer_data.data.amount
 			).unwrap();
-			let xcm_origin =
-			T::LocationToAccountId::convert_ref(who.clone()).map_err(|_| Error::<T>::BadXCMLocation)?;
+			let xcm_origin = T::LocationToAccountId::reverse_ref(&who).map_err(|_| Error::<T>::BadXCMLocation)?;
+			// TODO: examine the last parameter `weight_limit` 
 			match T::XcmExecutor::execute_xcm(xcm_origin, xcm, 50) {
-				Ok(_) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
-				Err(_err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
+				Outcome::Complete(_weight) => Self::deposit_event(RawEvent::TransferXTokenToChain(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
+				Outcome::Incomplete(_, _err) | Outcome::Error(_err) => Self::deposit_event(RawEvent::XcmExecutorFailed(transfer_data.data.dest, transfer_data.data.currency_id.into(), transfer_data.data.amount, sequence + 1)),
 			}
 
 			// Announce the successful execution
