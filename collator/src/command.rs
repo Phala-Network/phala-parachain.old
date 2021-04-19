@@ -84,7 +84,7 @@ impl SubstrateCli for Cli {
 	}
 
 	fn load_spec(&self, id: &str) -> std::result::Result<Box<dyn sc_service::ChainSpec>, String> {
-		load_spec(id, self.run.parachain_id.unwrap_or(30).into())
+		load_spec(id, self.run.parachain_id.unwrap_or(3000).into())
 	}
 
 	fn native_runtime_version(_: &Box<dyn ChainSpec>) -> &'static RuntimeVersion {
@@ -151,7 +151,7 @@ pub fn run() -> Result<()> {
 			// Ref: https://github.com/paritytech/substrate/blob/master/client/cli/src/config.rs#L475
 			let chain_spec = load_spec(
 				&cmd.shared_params.chain.clone().unwrap_or_default(),
-				cmd.parachain_id.unwrap_or(30).into()
+				cmd.parachain_id.unwrap_or(3000).into()
 			)?;
 
 			runner.sync_run(|config| {
@@ -247,7 +247,7 @@ pub fn run() -> Result<()> {
 
 			let block: Block = generate_genesis_block(&load_spec(
 				&params.chain.clone().unwrap_or_default(),
-				params.parachain_id.unwrap_or(30).into(),
+				params.parachain_id.unwrap_or(3000).into(),
 			)?)?;
 			let raw_header = block.header().encode();
 			let output_buf = if params.raw {
@@ -302,7 +302,7 @@ pub fn run() -> Result<()> {
 						.chain(cli.relaychain_args.iter()),
 				);
 
-				let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(30));
+				let id = ParaId::from(cli.run.parachain_id.or(para_id).unwrap_or(3000));
 
 				let parachain_account =
 					AccountIdConversion::<polkadot_primitives::v0::AccountId>::into_account(&id);

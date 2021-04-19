@@ -92,7 +92,7 @@ use xcm_builder::{
 };
 use xcm_executor::{Config, XcmExecutor};
 // Custom XCM Transactor
-mod xcm_transactor;
+pub mod xcm_transactor;
 
 pub type SessionHandlers = ();
 
@@ -594,19 +594,19 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayChainNetwork, AccountId>,
 );
 
-// pub type LocalAssetTransactor = PhalaXcmTransactor;
+pub type LocalAssetTransactor = XcmTransactor;
 
 /// Means for transacting assets on this chain.
-pub type LocalAssetTransactor = CurrencyAdapter<
-	// Use this currency:
-	Balances,
-	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RelayChainLocation>,
-	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
-	LocationToAccountId,
-	// Our chain's account ID type (we can't get away without mentioning it explicitly):
-	AccountId,
->;
+// pub type LocalAssetTransactor = CurrencyAdapter<
+// 	// Use this currency:
+// 	Balances,
+// 	// Use this currency when it is a fungible asset matching the given location or name:
+// 	IsConcrete<RelayChainLocation>,
+// 	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
+// 	LocationToAccountId,
+// 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
+// 	AccountId,
+// >;
 
 /// This is the type we use to convert an (incoming) XCM origin into a local `Origin` instance,
 /// ready for dispatching a transaction with Xcm's `Transact`. There is an `OriginKind` which can

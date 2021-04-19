@@ -1472,7 +1472,7 @@ fn handle_events(
             }
         } else if let chain::Event::xcm_transactor(xa) = &evt.event {
             println!("xcm_transactor event: {:?}", xa);
-            if let xcm_transactor::RawEvent::DepositAsset(_, _, _, to_tee) = xa {
+            if let chain::xcm_transactor::RawEvent::DepositAsset(_, _, _, to_tee) = xa {
                 if *to_tee {
                     state.contract3.handle_event(evt.event.clone());
                 }
