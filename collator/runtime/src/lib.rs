@@ -84,10 +84,10 @@ use constants::{currency::*};
 use polkadot_parachain::primitives::Sibling;
 use xcm::v0::{Junction, MultiLocation, NetworkId};
 use xcm_builder::{
-	AccountId32Aliases, CurrencyAdapter, LocationInverter, ParentIsDefault, RelayChainAsNative,
+	AccountId32Aliases, LocationInverter, ParentIsDefault, RelayChainAsNative,
 	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
 	SovereignSignedViaLocation, FixedRateOfConcreteFungible, EnsureXcmOrigin,
-	AllowTopLevelPaidExecutionFrom, TakeWeightCredit, FixedWeightBounds, IsConcrete, NativeAsset,
+	AllowTopLevelPaidExecutionFrom, TakeWeightCredit, FixedWeightBounds, NativeAsset,
 	AllowUnpaidExecutionFrom, ParentAsSuperuser,
 };
 use xcm_executor::{Config, XcmExecutor};
