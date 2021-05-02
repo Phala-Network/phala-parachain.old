@@ -19,7 +19,9 @@
     "pubkey": "Vec<u8>",
     "lastUpdated": "u64",
     "state": "WorkerStateEnum",
-    "score": "Option<Score>"
+    "score": "Option<Score>",
+    "confidenceLevel": "u8",
+    "runtimeVersion": "u32"
   },
   "Score": {
     "overallScore": "u32",
@@ -42,11 +44,6 @@
     "round": "u32",
     "startBlock": "BlockNumber"
   },
-  "StashWorkerStats": {
-    "slash": "Balance",
-    "compute_received": "Balance",
-    "online_received": "Balance"
-  },
   "RoundStats": {
     "round": "u32",
     "onlineWorkers": "u32",
@@ -54,6 +51,11 @@
     "fracTargetOnlineReward": "u32",
     "totalPower": "u32",
     "fracTargetComputeReward": "u32"
+  },
+  "StashWorkerStats": {
+    "slash": "Balance",
+    "computeReceived": "Balance",
+    "onlineReceived": "Balance"
   },
   "MinerStatsDelta": {
     "numWorker": "i32",
