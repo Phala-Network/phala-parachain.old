@@ -192,7 +192,6 @@ construct_runtime! {
 		// Phala pallets
 		Phala: pallet_phala::{Pallet, Call, Config<T>, Storage, Event<T>},
 		MiningStaking: pallet_mining_staking::{Pallet, Call, Storage, Event<T>},
-		PhaClaim: pallet_claim::{Pallet, Call, Storage, Event<T>, ValidateUnsigned},
 	}
 }
 
@@ -895,12 +894,6 @@ impl pallet_phala::Config for Runtime {
 	// type XcmConfig = XcmConfig;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type AccountIdConverter = LocationToAccountId;
-}
-
-impl pallet_claim::Config for Runtime {
-	type Event = Event;
-	type Call = Call;
-	type Currency = Balances;
 }
 
 impl pallet_mining_staking::Config for Runtime {

@@ -5,7 +5,7 @@ authors = ["Phala Network"]
 edition = '2018'
 
 [dependencies]
-serde = { version = "1.0.101", optional = true, features = ["derive"] }
+serde = { version = "1.0.101", default-features = false, features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "2.1.0", default-features = false, features = ["derive"] }
 log = { version = "0.4.14", default-features = false }
 
@@ -51,7 +51,6 @@ pallet-recovery = { git = "https://github.com/paritytech/substrate", branch = "r
 pallet-democracy = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 
 pallet-phala = { path = "../../pallets/phala", default-features = false }
-pallet-claim = { path = "../../pallets/claim", default-features = false }
 pallet-mining-staking = { path = "../../pallets/mining_staking", default-features = false }
 
 native-nostd-hasher = { path = "../../vendor/native-nostd-hasher", optional = true }
@@ -80,7 +79,7 @@ include-wasm = []
 native-nostd = ["native-nostd-hasher"]
 std = [
 	"codec/std",
-	"serde",
+	"serde/std",
 	"log/std",
 	"sp-api/std",
 	"sp-std/std",
@@ -128,6 +127,5 @@ std = [
 	"pallet-identity/std",
 	"pallet-vesting/std",
 	"pallet-phala/std",
-	"pallet-claim/std",
 	"pallet-mining-staking/std"
 ]

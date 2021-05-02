@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 
 exclude = [
 	"vendor/subxt",
@@ -16,8 +17,5 @@ members = [
 	"common/types",
 	"pallets/phala",
 	"pallets/mining_staking",
-	"pallets/claim",
 	"phost"
 ]
-
-resolver = "2"
