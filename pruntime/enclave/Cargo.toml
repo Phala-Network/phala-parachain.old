@@ -43,13 +43,13 @@ bit-vec     = { version = "*", default-features = false }
 itertools   = { version = "0.8", default-features = false }
 lazy_static = { version = "*", default-features = false, features = ["spin_no_std"] }
 
-sp-io                = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
-sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+sp-io                = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
+sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, features = ["disable_target_static_assertions"] }
 sp-runtime           = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 parity-scale-codec   = { package = "parity-scale-codec", version = "2.1.0", default-features = false, features = ["derive"] }
 
 # Phala specific
-runtime = { path = "../../collator/runtime", default-features = false, package = "phala-parachain-runtime" }
+runtime = { path = "../../collator/runtime", package = "phala-parachain-runtime", default-features = false, features = ["native-nostd"] }
 pallet-phala = { package = "pallet-phala", path = "../../pallets/phala", default-features = false }
 phala-types = { path = "../../common/types", default-features = false, features = ["enable_serde", "pruntime"] }
 
@@ -68,15 +68,6 @@ sp-application-crypto = { git = "https://github.com/paritytech/substrate", branc
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, features = ["full_crypto"] }
 fixed = { git = "https://github.com/encointer/substrate-fixed", package = "substrate-fixed", default-features = false }
 xcm = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
-
-[features]
-default = [
-  "sp-runtime-interface/disable_target_static_assertions",
-  "sp-io/disable_panic_handler",
-  "sp-io/disable_oom",
-  "sp-io/disable_allocator",
-  "runtime/native-nostd"
-]
 
 [patch.'https://github.com/apache/teaclave-sgx-sdk.git']
 sgx_alloc = { git = "https://github.com/Phala-Network/incubator-teaclave-sgx-sdk.git" }

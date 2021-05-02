@@ -11,7 +11,6 @@ repository = "https://github.com/Phala-Network/phala-blockchain"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-serde = { version = "1.0.101", default-features = false, optional = true }
 codec = { package = "parity-scale-codec", version = "2.1.0", default-features = false }
 log = { version = "0.4.14", default-features = false }
 itertools = { version = "0.8", default-features = false }
@@ -32,7 +31,6 @@ frame-support-test = { git = "https://github.com/paritytech/substrate", branch =
 [features]
 default = ['std']
 std = [
-    "serde/std",
     "codec/std",
     "log/std",
     "sp-runtime/std",
