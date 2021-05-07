@@ -33,9 +33,11 @@ use crate::std::str;
 use crate::std::string::String;
 use crate::std::sync::SgxMutex;
 use crate::std::vec::Vec;
+use anyhow::Result;
 use core::convert::TryInto;
 use frame_system::EventRecord;
 use itertools::Itertools;
+use log::{debug, error, info, warn};
 use parity_scale_codec::{Decode, Encode, FullCodec};
 use secp256k1::{PublicKey, SecretKey};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -46,6 +48,8 @@ use sp_core::H256 as Hash;
 
 use http_req::request::{Method, Request};
 use std::time::Duration;
+
+use pink::InkModule;
 
 extern crate pallet_phala as phala;
 use phala_types::{
@@ -67,7 +71,8 @@ mod system;
 mod types;
 
 use contracts::{
-    AccountIdWrapper, Contract, ContractId, ASSETS, BALANCES, DATA_PLAZA, SYSTEM, WEB3_ANALYTICS,
+    AccountIdWrapper, Contract, ContractId, ASSETS, BALANCES, DATA_PLAZA, DIEM, SYSTEM,
+    WEB3_ANALYTICS,
 };
 use cryptography::{aead, ecdh};
 use light_validation::AuthoritySetChange;
@@ -155,6 +160,7 @@ struct RuntimeState {
     contract2: contracts::balances::Balances,
     contract3: contracts::assets::Assets,
     contract4: contracts::web3analytics::Web3Analytics,
+    contract5: contracts::diem::Diem,
     #[serde(serialize_with = "se_to_b64", deserialize_with = "de_from_b64")]
     light_client: ChainLightValidation,
     main_bridge: u64,
@@ -166,13 +172,19 @@ struct LocalState {
     private_key: Box<SecretKey>,
     headernum: u32, // the height of synced block
     blocknum: u32,  // the height of dispatched block
+    block_hashes: Vec<Hash>,
     ecdh_private_key: Option<EcdhKey>,
     ecdh_public_key: Option<ring::agreement::PublicKey>,
     machine_id: [u8; 16],
     dev_mode: bool,
     runtime_info: Option<InitRuntimeResp>,
-    last_relaychain_header: Option<HeaderToSync>,
-    last_parachain_header: Option<chain::Header>,
+}
+
+struct TestContract {
+    name: String,
+    code: Vec<u8>,
+    initial_data: Vec<u8>,
+    txs: Vec<Vec<u8>>,
 }
 
 fn se_to_b64<S>(value: &ChainLightValidation, serializer: S) -> Result<S::Ok, S::Error>
@@ -220,8 +232,9 @@ lazy_static! {
         SgxMutex::new(RuntimeState {
             contract1: contracts::data_plaza::DataPlaza::new(),
             contract2: contracts::balances::Balances::new(None),
-            contract3: contracts::assets::Assets::new(None),
+            contract3: contracts::assets::Assets::new(),
             contract4: contracts::web3analytics::Web3Analytics::new(),
+            contract5: contracts::diem::Diem::new(),
             light_client: ChainLightValidation::new(),
             main_bridge: 0
         })
@@ -240,13 +253,12 @@ lazy_static! {
                 private_key: Box::new(sk),
                 headernum: 0,
                 blocknum: 0,
+                block_hashes: Vec::new(),
                 ecdh_private_key: None,
                 ecdh_public_key: None,
                 machine_id: [0; 16],
                 dev_mode: false,
                 runtime_info: None,
-                last_relaychain_header: None,
-                last_parachain_header: None,
             }
         )
     };
@@ -334,7 +346,7 @@ pub fn get_sigrl_from_intel(gid: u32) -> Vec<u8> {
             _ => "Unknown error occured",
         };
 
-        println!("{}", msg);
+        error!("{}", msg);
         // TODO: should return Err
         panic!("status code {}", status_code);
     }
@@ -342,7 +354,7 @@ pub fn get_sigrl_from_intel(gid: u32) -> Vec<u8> {
     if res.content_len() != None && res.content_len() != Some(0) {
         let res_body = res_body_buffer.clone();
         let encoded_sigrl = str::from_utf8(&res_body).unwrap();
-        println!("Base64-encoded SigRL: {:?}", encoded_sigrl);
+        info!("Base64-encoded SigRL: {:?}", encoded_sigrl);
 
         return base64::decode(encoded_sigrl).unwrap();
     }
@@ -392,7 +404,7 @@ pub fn get_report_from_intel(quote: Vec<u8>) -> (String, String, String) {
             _ => "Unknown error occured",
         };
 
-        println!("{}", msg);
+        error!("{}", msg);
         // TODO: should return Err
         panic!("status code not 200");
     }
@@ -400,7 +412,7 @@ pub fn get_report_from_intel(quote: Vec<u8>) -> (String, String, String) {
     let content_len = match res.content_len() {
         Some(len) => len,
         _ => {
-            println!("content_length not found");
+            warn!("content_length not found");
             0
         }
     };
@@ -443,7 +455,7 @@ fn as_u32_le(array: &[u8; 4]) -> u32 {
 pub fn create_attestation_report(
     data: &[u8],
     sign_type: sgx_quote_sign_type_t,
-) -> Result<(String, String, String), sgx_status_t> {
+) -> Result<(String, String, String)> {
     let data_len = data.len();
     if data_len > SGX_REPORT_DATA_SIZE {
         panic!("data length over 64 bytes");
@@ -468,14 +480,14 @@ pub fn create_attestation_report(
         )
     };
 
-    println!("eg = {:?}", eg);
+    info!("eg = {:?}", eg);
 
     if res != sgx_status_t::SGX_SUCCESS {
-        return Err(res);
+        return Err(anyhow::Error::msg(res));
     }
 
     if rt != sgx_status_t::SGX_SUCCESS {
-        return Err(rt);
+        return Err(anyhow::Error::msg(rt));
     }
 
     let eg_num = as_u32_le(&eg);
@@ -492,11 +504,11 @@ pub fn create_attestation_report(
 
     let rep = match rsgx_create_report(&ti, &report_data) {
         Ok(r) => {
-            println!("Report creation => success {:?}", r.body.mr_signer.m);
+            info!("Report creation => success {:?}", r.body.mr_signer.m);
             Some(r)
         }
         Err(e) => {
-            println!("Report creation => failed {:?}", e);
+            warn!("Report creation => failed {:?}", e);
             None
         }
     };
@@ -504,7 +516,7 @@ pub fn create_attestation_report(
     let mut quote_nonce = sgx_quote_nonce_t { rand: [0; 16] };
     let mut os_rng = os::SgxRng::new().unwrap();
     os_rng.fill_bytes(&mut quote_nonce.rand);
-    println!("rand finished");
+    info!("rand finished");
     let mut qe_report = sgx_report_t::default();
     const RET_QUOTE_BUF_LEN: u32 = 2048;
     let mut return_quote_buf: [u8; RET_QUOTE_BUF_LEN as usize] = [0; RET_QUOTE_BUF_LEN as usize];
@@ -555,21 +567,21 @@ pub fn create_attestation_report(
     };
 
     if result != sgx_status_t::SGX_SUCCESS {
-        return Err(result);
+        return Err(anyhow::Error::msg(result));
     }
 
     if rt != sgx_status_t::SGX_SUCCESS {
-        println!("ocall_get_quote returned {}", rt);
-        return Err(rt);
+        error!("ocall_get_quote returned {}", rt);
+        return Err(anyhow::Error::msg(rt));
     }
 
     // Added 09-28-2018
     // Perform a check on qe_report to verify if the qe_report is valid
     match rsgx_verify_report(&qe_report) {
-        Ok(()) => println!("rsgx_verify_report passed!"),
+        Ok(()) => info!("rsgx_verify_report passed!"),
         Err(x) => {
-            println!("rsgx_verify_report failed with {:?}", x);
-            return Err(x);
+            error!("rsgx_verify_report failed with {:?}", x);
+            return Err(anyhow::Error::msg(x));
         }
     }
 
@@ -578,11 +590,11 @@ pub fn create_attestation_report(
         || ti.attributes.flags != qe_report.body.attributes.flags
         || ti.attributes.xfrm != qe_report.body.attributes.xfrm
     {
-        println!("qe_report does not match current target_info!");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        error!("qe_report does not match current target_info!");
+        return Err(anyhow::Error::msg(sgx_status_t::SGX_ERROR_UNEXPECTED));
     }
 
-    println!("qe_report check passed");
+    info!("qe_report check passed");
 
     // Debug
     // for i in 0..quote_len {
@@ -604,12 +616,12 @@ pub fn create_attestation_report(
     let rhs_hash = rsgx_sha256_slice(&rhs_vec[..]).unwrap();
     let lhs_hash = &qe_report.body.report_data.d[..32];
 
-    println!("rhs hash = {:02X}", rhs_hash.iter().format(""));
-    println!("report hs= {:02X}", lhs_hash.iter().format(""));
+    info!("rhs hash = {:02X}", rhs_hash.iter().format(""));
+    info!("report hs= {:02X}", lhs_hash.iter().format(""));
 
     if rhs_hash != lhs_hash {
-        println!("Quote is tampered!");
-        return Err(sgx_status_t::SGX_ERROR_UNEXPECTED);
+        error!("Quote is tampered!");
+        return Err(anyhow::Error::msg(sgx_status_t::SGX_ERROR_UNEXPECTED));
     }
 
     let quote_vec: Vec<u8> = return_quote_buf[..quote_len as usize].to_vec();
@@ -646,7 +658,7 @@ const ACTION_DISPATCH_BLOCK: u8 = 7;
 const ACTION_GET_RUNTIME_INFO: u8 = 10;
 const ACTION_SET: u8 = 21;
 const ACTION_GET: u8 = 22;
-const ACTION_SYNC_PARACHAIN_HEADER: u8 = 13;
+const ACTION_TEST_INK: u8 = 100;
 
 #[no_mangle]
 pub extern "C" fn ecall_set_state(input_ptr: *const u8, input_len: usize) -> sgx_status_t {
@@ -680,7 +692,6 @@ pub extern "C" fn ecall_handle(
         ACTION_TEST => test(load_param(input_value)),
         ACTION_QUERY => query(load_param(input_value)),
         ACTION_SYNC_HEADER => sync_header(load_param(input_value)),
-        ACTION_SYNC_PARACHAIN_HEADER => sync_parachain_header(load_param(input_value)),
         ACTION_DISPATCH_BLOCK => dispatch_block(load_param(input_value)),
         _ => {
             let payload = input_value.as_object().unwrap();
@@ -691,6 +702,7 @@ pub extern "C" fn ecall_handle(
                 ACTION_GET => get(payload),
                 ACTION_SET => set(payload),
                 ACTION_GET_RUNTIME_INFO => get_runtime_info(payload),
+                ACTION_TEST_INK => test_ink(payload),
                 _ => unknown(),
             }
         }
@@ -726,7 +738,7 @@ pub extern "C" fn ecall_handle(
             })
         }
     };
-    println!("{}", output_json.to_string());
+    info!("{}", output_json.to_string());
 
     let output_json_vec = serde_json::to_vec(&output_json).unwrap();
     let output_json_vec_len = output_json_vec.len();
@@ -736,7 +748,7 @@ pub extern "C" fn ecall_handle(
         if output_json_vec_len <= output_buf_len {
             ptr::copy_nonoverlapping(output_json_vec.as_ptr(), output_ptr, output_json_vec_len);
         } else {
-            println!("Too much output. Buffer overflow.");
+            warn!("Too much output. Buffer overflow.");
         }
         ptr::copy_nonoverlapping(
             output_json_vec_len_ptr,
@@ -762,7 +774,7 @@ fn save_secret_keys(
     ecdsa_sk: SecretKey,
     ecdh_sk: EcdhKey,
     dev_mode: bool,
-) -> Result<PersistentRuntimeData, Error> {
+) -> Result<PersistentRuntimeData> {
     // Put in PresistentRuntimeData
     let serialized_sk = ecdsa_sk.serialize();
     let serialized_ecdh_sk = ecdh::dump_key(&ecdh_sk);
@@ -775,16 +787,16 @@ fn save_secret_keys(
     };
     let encoded_vec = serde_cbor::to_vec(&data).unwrap();
     let encoded_slice = encoded_vec.as_slice();
-    println!("Length of encoded slice: {}", encoded_slice.len());
-    println!(
+    info!("Length of encoded slice: {}", encoded_slice.len());
+    info!(
         "Encoded slice: {:?}",
         hex::encode_hex_compact(encoded_slice)
     );
 
     // Seal
     let aad: [u8; 0] = [0_u8; 0];
-    let result = SgxSealedData::<[u8]>::seal_data(&aad, encoded_slice);
-    let sealed_data = result.map_err(|e| Error::SgxError(e))?;
+    let sealed_data =
+        SgxSealedData::<[u8]>::seal_data(&aad, encoded_slice).map_err(anyhow::Error::msg)?;
 
     let mut return_output_buf = vec![0; SEAL_DATA_BUF_MAX_LEN].into_boxed_slice();
     let output_len: usize = return_output_buf.len();
@@ -794,17 +806,19 @@ fn save_secret_keys(
 
     let opt = to_sealed_log_for_slice(&sealed_data, output_ptr, output_len as u32);
     if opt.is_none() {
-        return Err(Error::SgxError(sgx_status_t::SGX_ERROR_INVALID_PARAMETER));
+        return Err(anyhow::Error::msg(
+            sgx_status_t::SGX_ERROR_INVALID_PARAMETER,
+        ));
     }
 
     // TODO: check retval and result
     let mut _retval = sgx_status_t::SGX_SUCCESS;
     let _result = unsafe { ocall_save_persistent_data(&mut _retval, output_ptr, output_len) };
-    println!("Persistent Runtime Data saved");
+    info!("Persistent Runtime Data saved");
     Ok(data)
 }
 
-fn load_secret_keys() -> Result<PersistentRuntimeData, Error> {
+fn load_secret_keys() -> Result<PersistentRuntimeData> {
     // Try load persisted sealed data
     let mut sealed_data_buf = vec![0; SEAL_DATA_BUF_MAX_LEN].into_boxed_slice();
     let mut sealed_data_len: usize = 0;
@@ -822,7 +836,7 @@ fn load_secret_keys() -> Result<PersistentRuntimeData, Error> {
         )
     };
     if load_result != sgx_status_t::SGX_SUCCESS || sealed_data_len == 0 {
-        return Err(Error::PersistentRuntimeNotFound);
+        return Err(anyhow::Error::msg(Error::PersistentRuntimeNotFound));
     }
 
     let opt = from_sealed_log_for_slice::<u8>(sealed_data_ptr, sealed_data_len as u32);
@@ -833,28 +847,34 @@ fn load_secret_keys() -> Result<PersistentRuntimeData, Error> {
         }
     };
 
-    let unsealed_data = sealed_data.unseal_data().map_err(|e| Error::SgxError(e))?;
+    let unsealed_data = sealed_data.unseal_data().map_err(anyhow::Error::msg)?;
     let encoded_slice = unsealed_data.get_decrypt_txt();
-    println!("Length of encoded slice: {}", encoded_slice.len());
-    println!(
+    info!("Length of encoded slice: {}", encoded_slice.len());
+    info!(
         "Encoded slice: {:?}",
         hex::encode_hex_compact(encoded_slice)
     );
 
-    serde_cbor::from_slice(encoded_slice).map_err(|_| Error::DecodeError)
+    serde_cbor::from_slice(encoded_slice).map_err(|_| anyhow::Error::msg(Error::DecodeError))
 }
 
 fn init_secret_keys(
     local_state: &mut LocalState,
     predefined_keys: Option<(SecretKey, EcdhKey)>,
-) -> Result<PersistentRuntimeData, Error> {
+) -> Result<PersistentRuntimeData> {
     let data = if let Some((ecdsa_sk, ecdh_sk)) = predefined_keys {
         save_secret_keys(ecdsa_sk, ecdh_sk, true)?
     } else {
         match load_secret_keys() {
             Ok(data) => data,
-            Err(Error::PersistentRuntimeNotFound) => {
-                println!("Persistent data not found.");
+            Err(e)
+                if e.is::<Error>()
+                    && matches!(
+                        e.downcast_ref::<Error>().unwrap(),
+                        Error::PersistentRuntimeNotFound
+                    ) =>
+            {
+                warn!("Persistent data not found.");
                 let ecdsa_sk = SecretKey::random(&mut rand::thread_rng());
                 let ecdh_sk = ecdh::generate_key();
                 save_secret_keys(ecdsa_sk, ecdh_sk, false)?
@@ -872,19 +892,19 @@ fn init_secret_keys(
     let ecdsa_pk = PublicKey::from_secret_key(&ecdsa_sk);
     let ecdsa_serialized_pk = ecdsa_pk.serialize_compressed();
     let ecdsa_hex_pk = hex::encode_hex_compact(ecdsa_serialized_pk.as_ref());
-    println!("Identity pubkey: {:?}", ecdsa_hex_pk);
+    info!("Identity pubkey: {:?}", ecdsa_hex_pk);
 
     // load ECDH identity
     let ecdh_raw_key = hex::decode_hex(&data.ecdh_sk);
     let ecdh_sk = ecdh::create_key(ecdh_raw_key.as_slice()).expect("can't create ecdh key");
     let ecdh_pk = ecdh_sk.compute_public_key().expect("can't compute pubkey");
     let ecdh_hex_pk = hex::encode_hex_compact(ecdh_pk.as_ref());
-    println!("ECDH pubkey: {:?}", ecdh_hex_pk);
+    info!("ECDH pubkey: {:?}", ecdh_hex_pk);
 
     // Generate Seal Key as Machine Id
     // This SHOULD be stable on the same CPU
     let machine_id = generate_seal_key();
-    println!("Machine id: {:?}", hex::encode_hex_compact(&machine_id));
+    info!("Machine id: {:?}", hex::encode_hex_compact(&machine_id));
 
     // Save
     *local_state.public_key = ecdsa_pk.clone();
@@ -894,7 +914,7 @@ fn init_secret_keys(
     local_state.machine_id = machine_id.clone();
     local_state.dev_mode = data.dev_mode;
 
-    println!("Init done.");
+    info!("Init done.");
     Ok(data)
 }
 
@@ -902,7 +922,7 @@ fn init_secret_keys(
 pub extern "C" fn ecall_init() -> sgx_status_t {
     let mut local_state = LOCAL_STATE.lock().unwrap();
     match init_secret_keys(&mut local_state, None) {
-        Err(Error::SgxError(sgx_err)) => sgx_err,
+        Err(e) if e.is::<sgx_status_t>() => e.downcast::<sgx_status_t>().unwrap(),
         _ => sgx_status_t::SGX_SUCCESS,
     }
 }
@@ -927,12 +947,12 @@ fn dump_states(_input: &Map<String, Value>) -> Result<Value, Value> {
 
     // Your private data
     let content = serialized.as_bytes().to_vec();
-    println!("Content to encrypt's size {}", content.len());
-    println!("{}", serialized);
+    info!("Content to encrypt's size {}", content.len());
+    debug!("{}", serialized);
 
     // Ring uses the same input variable as output
     let mut in_out = content.clone();
-    println!("in_out len {}", in_out.len());
+    info!("in_out len {}", in_out.len());
 
     // Random data must be used only once per encryption
     let iv = aead::generate_iv();
@@ -947,14 +967,14 @@ fn dump_states(_input: &Map<String, Value>) -> Result<Value, Value> {
 fn load_states(input: &Map<String, Value>) -> Result<Value, Value> {
     let nonce_vec = hex::decode_hex(input.get("nonce").unwrap().as_str().unwrap());
     let mut in_out = hex::decode_hex(input.get("data").unwrap().as_str().unwrap());
-    println!("{}", input.get("data").unwrap().as_str().unwrap());
+    debug!("{}", input.get("data").unwrap().as_str().unwrap());
 
     let decrypted_data = aead::decrypt(&nonce_vec, &*SECRET, &mut in_out);
-    println!("{}", String::from_utf8(decrypted_data.to_vec()).unwrap());
+    debug!("{}", String::from_utf8(decrypted_data.to_vec()).unwrap());
 
     let deserialized: RuntimeState = serde_json::from_slice(decrypted_data).unwrap();
 
-    println!("{}", serde_json::to_string_pretty(&deserialized).unwrap());
+    debug!("{}", serde_json::to_string_pretty(&deserialized).unwrap());
 
     let mut sessions = STATE.lock().unwrap();
     let _ = std::mem::replace(&mut *sessions, deserialized);
@@ -968,6 +988,8 @@ fn init_runtime(input: InitRuntimeReq) -> Result<Value, Value> {
     if local_state.initialized {
         return Err(json!({"message": "Already initialized"}));
     }
+
+    env_logger::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     // load identity
     if let Some(key) = input.debug_set_key {
@@ -989,26 +1011,26 @@ fn init_runtime(input: InitRuntimeReq) -> Result<Value, Value> {
     let ecdsa_pk = &local_state.public_key;
     let ecdsa_serialized_pk = ecdsa_pk.serialize_compressed();
     let ecdsa_hex_pk = hex::encode_hex_compact(ecdsa_serialized_pk.as_ref());
-    println!("Identity pubkey: {:?}", ecdsa_hex_pk);
+    info!("Identity pubkey: {:?}", ecdsa_hex_pk);
 
     // load ECDH identity
     let ecdh_pk = local_state.ecdh_public_key.as_ref().unwrap();
     let ecdh_hex_pk = hex::encode_hex_compact(ecdh_pk.as_ref());
-    println!("ECDH pubkey: {:?}", ecdh_hex_pk);
+    info!("ECDH pubkey: {:?}", ecdh_hex_pk);
 
     // Measure machine score
     let cpu_core_num: u32 = sgx_trts::enclave::rsgx_get_cpu_core_num();
-    println!("CPU cores: {}", cpu_core_num);
+    info!("CPU cores: {}", cpu_core_num);
 
     let mut cpu_feature_level: u32 = 1;
     // Atom doesn't support AVX
     if is_x86_feature_detected!("avx2") {
-        println!("CPU Support AVX2");
+        info!("CPU Support AVX2");
         cpu_feature_level += 1;
 
         // Customer-level Core doesn't support AVX512
         if is_x86_feature_detected!("avx512f") {
-            println!("CPU Support AVX512");
+            info!("CPU Support AVX512");
             cpu_feature_level += 1;
         }
     }
@@ -1023,8 +1045,8 @@ fn init_runtime(input: InitRuntimeReq) -> Result<Value, Value> {
     let encoded_runtime_info = runtime_info.encode();
     let runtime_info_hash = sp_core::hashing::blake2_512(&encoded_runtime_info);
 
-    println!("Encoded runtime info");
-    println!("{:?}", hex::encode_hex_compact(&encoded_runtime_info));
+    info!("Encoded runtime info");
+    info!("{:?}", hex::encode_hex_compact(&encoded_runtime_info));
 
     // Produce remote attestation report
     let mut attestation: Option<InitRespAttestation> = None;
@@ -1035,7 +1057,7 @@ fn init_runtime(input: InitRuntimeReq) -> Result<Value, Value> {
         ) {
             Ok(r) => r,
             Err(e) => {
-                println!("Error in create_attestation_report: {:?}", e);
+                error!("Error in create_attestation_report: {:?}", e);
                 return Err(json!({"message": "Error while connecting to IAS"}));
             }
         };
@@ -1075,8 +1097,7 @@ fn init_runtime(input: InitRuntimeReq) -> Result<Value, Value> {
     let mut system_state = SYSTEM_STATE.lock().unwrap();
     system_state.set_id(&id_pair);
     system_state.set_machine_id(local_state.machine_id.to_vec());
-    state.contract2 = contracts::balances::Balances::new(Some(id_pair.clone()));
-    state.contract3 = contracts::assets::Assets::new(Some(id_pair));
+    state.contract2 = contracts::balances::Balances::new(Some(id_pair));
     // Initialize other states
     local_state.headernum = 1;
     local_state.blocknum = 1;
@@ -1106,28 +1127,28 @@ fn print_block(signed_block: &chain::SignedBlock) {
     let header: &chain::Header = &signed_block.block.header;
     let extrinsics: &Vec<chain::UncheckedExtrinsic> = &signed_block.block.extrinsics;
 
-    println!("SignedBlock {{");
-    println!("  block {{");
-    println!("    header {{");
-    println!("      number: {}", header.number);
-    println!("      extrinsics_root: {}", header.extrinsics_root);
-    println!("      state_root: {}", header.state_root);
-    println!("      parent_hash: {}", header.parent_hash);
-    println!("      digest: logs[{}]", header.digest.logs.len());
-    println!("  extrinsics: [");
+    debug!("SignedBlock {{");
+    debug!("  block {{");
+    debug!("    header {{");
+    debug!("      number: {}", header.number);
+    debug!("      extrinsics_root: {}", header.extrinsics_root);
+    debug!("      state_root: {}", header.state_root);
+    debug!("      parent_hash: {}", header.parent_hash);
+    debug!("      digest: logs[{}]", header.digest.logs.len());
+    debug!("  extrinsics: [");
     for extrinsic in extrinsics {
-        println!("    UncheckedExtrinsic {{");
-        println!("      function: {}", fmt_call(&extrinsic.function));
-        println!("      signature: {:?}", extrinsic.signature);
-        println!("    }}");
+        debug!("    UncheckedExtrinsic {{");
+        debug!("      function: {}", fmt_call(&extrinsic.function));
+        debug!("      signature: {:?}", extrinsic.signature);
+        debug!("    }}");
     }
-    println!("  ]");
-    println!("  justification: <skipped...>");
-    println!("}}");
+    debug!("  ]");
+    debug!("  justification: <skipped...>");
+    debug!("}}");
 }
 
-fn parse_block(data: &Vec<u8>) -> Result<chain::SignedBlock, parity_scale_codec::Error> {
-    chain::SignedBlock::decode(&mut data.as_slice())
+fn parse_block(data: &Vec<u8>) -> Result<chain::SignedBlock> {
+    chain::SignedBlock::decode(&mut data.as_slice()).map_err(anyhow::Error::msg)
 }
 
 fn format_address(addr: &chain::Address) -> String {
@@ -1163,9 +1184,9 @@ fn handle_execution(
     };
 
     let inner_data_string = String::from_utf8_lossy(&inner_data);
-    println!("handle_execution: incominng cmd: {}", inner_data_string);
+    info!("handle_execution: incominng cmd: {}", inner_data_string);
 
-    println!("handle_execution: about to call handle_command");
+    info!("handle_execution: about to call handle_command");
     let status = match contract_id {
         DATA_PLAZA => match serde_json::from_slice(inner_data.as_slice()) {
             Ok(cmd) => state.contract1.handle_command(&origin, pos, cmd),
@@ -1183,8 +1204,12 @@ fn handle_execution(
             Ok(cmd) => state.contract4.handle_command(&origin, pos, cmd),
             _ => TransactionStatus::BadCommand,
         },
+        DIEM => match serde_json::from_slice(inner_data.as_slice()) {
+            Ok(cmd) => state.contract5.handle_command(&origin, pos, cmd),
+            _ => TransactionStatus::BadCommand,
+        },
         _ => {
-            println!(
+            warn!(
                 "handle_execution: Skipped unknown contract: {}",
                 contract_id
             );
@@ -1258,7 +1283,7 @@ fn sync_header(input: SyncHeaderReq) -> Result<Value, Value> {
     }
     // Passed the validation
     let mut local_state = LOCAL_STATE.lock().unwrap();
-    let mut last_header_number = 0;
+    let mut last_header = 0;
     for header_with_events in headers.iter() {
         let header = &header_with_events.header;
         if header.number != local_state.headernum {
@@ -1266,51 +1291,16 @@ fn sync_header(input: SyncHeaderReq) -> Result<Value, Value> {
         }
 
         // move forward
-        last_header_number = header.number;
-        local_state.headernum = last_header_number + 1;
+        last_header = header.number;
+        local_state.headernum = last_header + 1;
     }
 
-    local_state.last_relaychain_header = Some(last_header.clone());
+    // Save the block hashes for future dispatch
+    for header in headers.iter() {
+        local_state.block_hashes.push(header.header.hash());
+    }
 
-    Ok(json!({ "synced_to": last_header_number }))
-}
-
-fn sync_parachain_header(input: SyncParaHeaderReq) -> Result<Value, Value> {
-    let ref mut state = STATE.lock().unwrap();
-
-    let raw_header_data: Vec<u8> = base64::decode(&input.header_b64)
-        .expect("Failed to parse base64 header");
-    let header_data: Vec<u8> = Vec::<u8>::decode(&mut raw_header_data.as_slice())
-        .expect("Failed to decode header data");
-    let header = chain::Header::decode(&mut header_data.as_slice())
-        .expect("Failed to decode header");
-    let header_proof_data = base64::decode(&input.header_proof_b64)
-        .expect("Failed to parse base64 header proof");
-    let header_proof:light_validation::storage_proof::StorageProof =
-        Decode::decode(&mut &header_proof_data[..])
-            .expect("Failed to decode header proof");
-    let para_id = base64::decode(&input.para_id_b64)
-        .expect("Failed to parse base64 parachain id");
-    let storage_key = light_validation::utils::storage_map_prefix(
-        "Paras",
-        "Heads",
-        &hex::encode_hex_compact(&para_id)
-    );
-    let mut local_state = LOCAL_STATE.lock().unwrap();
-    let state_root = local_state.last_relaychain_header.as_ref().unwrap().header.state_root;
-
-    state
-        .light_client
-        .validate_storage_proof(
-            state_root,
-            header_proof,
-            &[(storage_key.as_slice(), raw_header_data.as_slice())],
-        )
-        .map_err(|_| error_msg("Bad storage proof for parachain header"))?;
-
-    local_state.last_parachain_header = Some(header.clone());
-
-    Ok(json!({ "synced_parachain_header_to": header.number }))
+    Ok(json!({ "synced_to": last_header }))
 }
 
 fn dispatch_block(input: DispatchBlockReq) -> Result<Value, Value> {
@@ -1322,10 +1312,15 @@ fn dispatch_block(input: DispatchBlockReq) -> Result<Value, Value> {
         .iter()
         .map(|d| Decode::decode(&mut &d[..]))
         .collect();
-    let blocks = parsed_blocks.map_err(|_| error_msg("Invalid block"))?;
+    let all_blocks = parsed_blocks.map_err(|_| error_msg("Invalid block"))?;
 
-    // validate blocks
     let mut local_state = LOCAL_STATE.lock().unwrap();
+    // Ignore processed blocks
+    let blocks: Vec<_> = all_blocks
+        .iter()
+        .filter(|b| b.block_header.number >= local_state.blocknum)
+        .collect();
+    // Validate blocks
     let first_block = &blocks
         .first()
         .ok_or_else(|| error_msg("No block in the request"))?;
@@ -1338,11 +1333,11 @@ fn dispatch_block(input: DispatchBlockReq) -> Result<Value, Value> {
     if last_block.block_header.number >= local_state.headernum {
         return Err(error_msg("Unsynced block"));
     }
-    // We require the last block of each `dispatch_block` request must match the latest
-    // Para.Heads we got from relay chain
-    let last_parachain_header_hash = local_state.last_parachain_header.as_ref().unwrap().hash();
-    if last_block.block_header.hash() != last_parachain_header_hash {
-        return Err(error_msg("Bad block header"));
+    for (i, block) in blocks.iter().enumerate() {
+        let expected_hash = &local_state.block_hashes[i];
+        if block.block_header.hash() != *expected_hash {
+            return Err(error_msg("Unexpected block hash"));
+        }
     }
 
     let ecdh_privkey = ecdh::clone_key(
@@ -1351,26 +1346,20 @@ fn dispatch_block(input: DispatchBlockReq) -> Result<Value, Value> {
             .as_ref()
             .expect("ECDH not initizlied"),
     );
-    // TODO: validate block inclusion (#9)
-    let mut last_block_number = 0;
-    let mut current_bn = first_block.block_header.number - 1;
+    let mut last_block = 0;
     for block in blocks.iter() {
-        current_bn = current_bn + 1;
-        if current_bn != block.block_header.number {
-            return Err(error_msg("Unexpected block"));
-        }
-
         if block.events.is_none() {
             return Err(error_msg("Event was required"));
         }
 
         handle_events(&block, &ecdh_privkey, local_state.dev_mode)?;
 
-        last_block_number = block.block_header.number;
-        local_state.blocknum = last_block_number + 1;
+        last_block = block.block_header.number;
+        local_state.block_hashes.remove(0);
+        local_state.blocknum = last_block + 1;
     }
 
-    Ok(json!({ "dispatched_to": last_block_number }))
+    Ok(json!({ "dispatched_to": last_block }))
 }
 
 fn parse_authority_set_change(data_b64: String) -> Result<AuthoritySetChange, Value> {
@@ -1425,12 +1414,12 @@ fn handle_events(
                 .map_err(|e| error_msg(format!("Event error {:?}", e).as_str()))?;
             // Otherwise we only dispatch the events for dev_mode pRuntime (not miners)
             if !dev_mode {
-                println!("handle_events: skipped for miners");
+                info!("handle_events: skipped for miners");
                 continue;
             }
             match pe {
                 phala::RawEvent::CommandPushed(who, contract_id, payload, num) => {
-                    println!(
+                    info!(
                         "push_command(contract_id: {}, payload: data[{}])",
                         contract_id,
                         payload.len()
@@ -1451,30 +1440,8 @@ fn handle_events(
                         ecdh_privkey,
                     );
                 }
-                phala::RawEvent::TransferToTee(_, _) => {
-                    state.contract2.handle_event(evt.event.clone());
-                }
-                phala::RawEvent::TransferToChain(_, _, _) => {
-                    state.contract2.handle_event(evt.event.clone());
-                }
-                phala::RawEvent::TransferTokenToTee(_, _, _) => {
-                    state.contract3.handle_event(evt.event.clone());
-                }
-                phala::RawEvent::TransferTokenToChain(_, _, _, _) => {
-                    state.contract3.handle_event(evt.event.clone());
-                }
-                phala::RawEvent::TransferXTokenToChain(_, _, _, _) => {
-                    state.contract3.handle_event(evt.event.clone());
-                }
                 _ => {
-                    println!("unknown phala event.");
-                }
-            }
-        } else if let chain::Event::xcm_transactor(xa) = &evt.event {
-            println!("xcm_transactor event: {:?}", xa);
-            if let chain::xcm_transactor::RawEvent::DepositAsset(_, _, _, to_tee) = xa {
-                if *to_tee {
-                    state.contract3.handle_event(evt.event.clone());
+                    state.contract2.handle_event(evt.event.clone());
                 }
             }
         }
@@ -1487,13 +1454,13 @@ fn validate_worker_snapshot(
     state_root: Hash,
     snapshot: &OnlineWorkerSnapshot,
 ) -> bool {
-    println!("validate_worker_snapshot()");
+    info!("validate_worker_snapshot()");
     use light_validation::utils::storage_prefix;
     use phala_types::WorkerStateEnum;
     let prefix_onlineworkers = storage_prefix("Phala", "OnlineWorkers");
     let prefix_computeworkers = storage_prefix("Phala", "ComputeWorkers");
     let prefix_workerstate = storage_prefix("Phala", "WorkerState");
-    let prefix_stakereceived = storage_prefix("Mining", "StakeReceived");
+    let prefix_stakereceived = storage_prefix("MiningStaking", "StakeReceived");
 
     let cond = [
         // Check keys
@@ -1522,12 +1489,12 @@ fn validate_worker_snapshot(
             }),
     ];
     if !cond.iter().all(|x| *x) {
-        println!("Checks: {:?}", cond);
-        println!(
+        info!("Checks: {:?}", cond);
+        info!(
             "stake_received key: {}",
             hex::encode_hex_compact(snapshot.stake_received_kv[0].key())
         );
-        println!("snapshot: {:?}", snapshot);
+        info!("snapshot: {:?}", snapshot);
         return false;
     }
 
@@ -1547,7 +1514,7 @@ fn validate_worker_snapshot(
         raw_items_ref.as_slice(),
     );
     if r.is_err() {
-        println!("Snapshot light validation: {:?}", r);
+        error!("Snapshot light validation: {:?}", r);
         return false;
     }
     true
@@ -1567,6 +1534,10 @@ fn get_info(_input: &Map<String, Value>) -> Result<Value, Value> {
     let blocknum = local_state.blocknum;
     let machine_id = local_state.machine_id;
 
+    let system_state = SYSTEM_STATE.lock().unwrap();
+    let sys_seq_start = system_state.egress.sequence;
+    let sys_len = system_state.egress.queue.len();
+
     Ok(json!({
         "initialized": initialized,
         "public_key": s_pk,
@@ -1575,6 +1546,10 @@ fn get_info(_input: &Map<String, Value>) -> Result<Value, Value> {
         "blocknum": blocknum,
         "machine_id": machine_id,
         "dev_mode": local_state.dev_mode,
+        "system_egress": {
+            "sequence": sys_seq_start,
+            "len": sys_len,
+        }
     }))
 }
 
@@ -1587,6 +1562,58 @@ fn get_runtime_info(_input: &Map<String, Value>) -> Result<Value, Value> {
     Ok(serde_json::to_value(resp).unwrap())
 }
 
+fn test_ink(_input: &Map<String, Value>) -> Result<Value, Value> {
+    info!("=======Begin Ink Contract Test=======");
+
+    let mut testcases = Vec::new();
+    testcases.push(TestContract {
+        name: String::from("flipper"),
+        code: include_bytes!("res/flipper.wasm").to_vec(),
+        initial_data: vec![248, 30, 126, 26, 0],
+        txs: vec![
+            vec![205, 228, 239, 169], // flip()
+            vec![109, 76, 230, 60],   // get()
+        ],
+    });
+    testcases.push(TestContract {
+        name: String::from("EIP20Token"),
+        code: include_bytes!("res/EIP20Token.wasm").to_vec(),
+        initial_data: vec![134, 23, 49, 213],
+        txs: vec![
+            vec![
+                102, 136, 227, 5, 128, 150, 152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 36, 84, 101, 115, 116, 84, 111, 107, 101, 110,
+                2, 8, 84, 84,
+            ], // eip20 (initialAmount: u256, tokenName: String, decimalUnits: u8, tokenSymbol: String)
+            vec![
+                106, 70, 115, 148, 142, 175, 4, 21, 22, 135, 115, 99, 38, 201, 254, 161, 126, 37,
+                252, 82, 135, 97, 54, 147, 201, 18, 144, 156, 178, 38, 170, 71, 148, 242, 106, 72,
+                210, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0,
+            ], // transfer (to: AccountId, value: u256)
+        ],
+    });
+
+    for t in testcases {
+        let mut driver = InkModule::new();
+
+        info!("\n>>> Execute Contract {}", t.name);
+
+        let contract_key = driver.put_code(t.code).unwrap();
+        info!(">>> Code deplyed to {}", contract_key);
+
+        let result = InkModule::instantiate(contract_key, t.initial_data);
+        info!(">>> Code instantiated with result {:?}", result.unwrap());
+
+        for tx in t.txs {
+            let result = InkModule::call(contract_key, tx);
+            info!(">>> Code called with result {:?}", result.unwrap());
+        }
+    }
+
+    Ok(json!({}))
+}
+
 fn query(q: types::SignedQuery) -> Result<Value, Value> {
     let payload_data = q.query_payload.as_bytes();
     // Validate signature
@@ -1597,7 +1624,7 @@ fn query(q: types::SignedQuery) -> Result<Value, Value> {
         {
             return Err(error_msg("Verifying signature failed"));
         }
-        println!("Verifying signature passed!");
+        info!("Verifying signature passed!");
     }
     // Load and decrypt if necessary
     let payload: types::Payload =
@@ -1607,7 +1634,7 @@ fn query(q: types::SignedQuery) -> Result<Value, Value> {
         match payload {
             types::Payload::Plain(data) => (data.into_bytes(), None, None),
             types::Payload::Cipher(cipher) => {
-                println!("cipher: {:?}", cipher);
+                info!("cipher: {:?}", cipher);
                 let ecdh_privkey = local_state
                     .ecdh_private_key
                     .as_ref()
@@ -1621,7 +1648,7 @@ fn query(q: types::SignedQuery) -> Result<Value, Value> {
             }
         }
     };
-    println!("msg: {}", String::from_utf8_lossy(&msg));
+    debug!("msg: {}", String::from_utf8_lossy(&msg));
     let opaque_query: types::OpaqueQuery =
         serde_json::from_slice(&msg).map_err(|_| error_msg("Malformed request (Query)"))?;
     // Origin
@@ -1669,6 +1696,15 @@ fn query(q: types::SignedQuery) -> Result<Value, Value> {
                 ref_origin,
                 types::deopaque_query(opaque_query)
                     .map_err(|_| error_msg("Malformed request (w3a::Request)"))?
+                    .request,
+            ),
+        )
+        .unwrap(),
+        DIEM => serde_json::to_value(
+            state.contract5.handle_query(
+                ref_origin,
+                types::deopaque_query(opaque_query)
+                    .map_err(|_| error_msg("Malformed request (diem::Request)"))?
                     .request,
             ),
         )
@@ -1745,7 +1781,7 @@ fn test_bridge() {
         light_validation::BridgeInitInfo::<chain::Runtime>::decode(&mut raw_genesis.as_slice())
             .expect("Can't decode bridge_genesis_info_b64");
 
-    println!("bridge_genesis_info_b64: {:?}", genesis);
+    debug!("bridge_genesis_info_b64: {:?}", genesis);
 
     let mut state = STATE.lock().unwrap();
     let id = state
@@ -1771,11 +1807,11 @@ fn test_bridge() {
 fn test_parse_block() {
     let raw_block: Vec<u8> = base64::decode("iAKMDRPbdbAZ0eev9OZ1QgaAkoEnazAp6JzH2GeRFYdsR+pFUBbOaAW0+k5K+jPtsEr/P/JKJQDSobnB98Qhf8ug8HkDygkapC5T++CNvzYORIFimatwYSu/U53t66xzpQgGYXVyYSCGvagPAAAAAAVhdXJhAQEuXZ5zy2+qk+60y+/m1r0oZv/+LEiDCxMotfkvjP9aebuUVxBTmd2LCpu645AAjpRUNhqOmVuiKreUoV1aMpWLCCgEAQALoPTZAm8BQQKE/9Q1k8cV/dMcYRQavQSpn9aCLIVYhUzN45pWhOelbaJ9AU5gayhZiGwAEAthrYW6Ucm+acGAR3whdfUk17jp4NMearo4+NxR2w0VsVkEF0gQ/U6AHggnM+BZmvrhhMdSygqlAQAABAD/jq8EFRaHc2Mmyf6hfiX8UodhNpPJEpCcsiaqR5TyakgHABCl1OgA")
         .unwrap();
-    println!("SignedBlock data[{}]", raw_block.len());
+    debug!("SignedBlock data[{}]", raw_block.len());
     let block = match parse_block(&raw_block) {
         Ok(b) => b,
         Err(err) => {
-            println!("test_parse_block: Failed to parse block ({:?})", err);
+            error!("test_parse_block: Failed to parse block ({:?})", err);
             return;
         }
     };
@@ -1784,7 +1820,7 @@ fn test_parse_block() {
     // test parse address
     let ref_sig = block.block.extrinsics[1].signature.as_ref().unwrap();
     let ref_addr = &ref_sig.0;
-    println!("test_parse_block: addr = {}", format_address(ref_addr));
+    debug!("test_parse_block: addr = {}", format_address(ref_addr));
 
     let cmd_json = serde_json::to_string_pretty(&contracts::data_plaza::Command::List(
         contracts::data_plaza::ItemDetails {
@@ -1797,7 +1833,7 @@ fn test_parse_block() {
         },
     ))
     .expect("jah");
-    println!("sample command: {}", cmd_json);
+    debug!("sample command: {}", cmd_json);
 }
 
 fn test_ecdh(params: TestEcdhParam) {
@@ -1821,15 +1857,15 @@ fn test_ecdh(params: TestEcdhParam) {
         .as_ref()
         .expect("ECDH private key not initialized");
     let key = ecdh::agree(alice_priv, pk);
-    println!("ECDH derived secret key: {}", hex::encode_hex_compact(&key));
+    debug!("ECDH derived secret key: {}", hex::encode_hex_compact(&key));
 
     if let Some(msg_b64) = params.message_b64 {
         let mut msg = base64::decode(&msg_b64).expect("Failed to decode msg_b64");
         let iv = aead::generate_iv();
         aead::encrypt(&iv, &key, &mut msg);
 
-        println!("AES-GCM: {}", hex::encode_hex_compact(&msg));
-        println!("IV: {}", hex::encode_hex_compact(&iv));
+        debug!("AES-GCM: {}", hex::encode_hex_compact(&msg));
+        debug!("IV: {}", hex::encode_hex_compact(&iv));
     }
 }
 

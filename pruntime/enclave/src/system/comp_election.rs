@@ -1,4 +1,5 @@
 use crate::std::{cmp, vec::Vec};
+use log::info;
 use rand::{rngs::SmallRng, seq::index::IndexVec, SeedableRng};
 
 use crate::OnlineWorkerSnapshot;
@@ -12,7 +13,7 @@ pub fn elect(seed: u64, candidates: &OnlineWorkerSnapshot, mid: &Vec<u8>) -> boo
         *candidates.compute_workers_kv.value() as usize,
         weights.len(),
     );
-    println!(
+    info!(
         "elect: electing {} winners from {} candidates",
         candidates.compute_workers_kv.value(),
         weights.len()
@@ -31,7 +32,7 @@ pub fn elect(seed: u64, candidates: &OnlineWorkerSnapshot, mid: &Vec<u8>) -> boo
     let mut hit = false;
     for &i in &indices {
         let worker_info = candidates.worker_state_kv[i as usize].value();
-        println!(
+        info!(
             "- winner[{}]: mid={} score={} weight={}",
             i,
             crate::hex::encode_hex_compact(&worker_info.machine_id),
@@ -40,7 +41,7 @@ pub fn elect(seed: u64, candidates: &OnlineWorkerSnapshot, mid: &Vec<u8>) -> boo
         );
         if &worker_info.machine_id == mid {
             hit = true;
-            println!("elect: hit!");
+            info!("elect: hit!");
         }
     }
     hit
@@ -81,7 +82,7 @@ fn weight(score: u32, staked: u128) -> u32 {
     let fstaked = Fixed::from_num(stake_1e4) / F_1E4;
     let factor: Fixed = sqrt(fstaked).expect("U128 should never overflow or be negative; qed.");
     let result = score + (factor * 5).to_num::<u32>();
-    println!("weight(score={}, staked={}) = {}", score, staked, result);
+    info!("weight(score={}, staked={}) = {}", score, staked, result);
     result
 }
 
@@ -89,11 +90,21 @@ fn weight(score: u32, staked: u128) -> u32 {
 mod sampling {
     use crate::std;
     use crate::std::vec::Vec;
+    use anyhow::Result;
+    use core::fmt;
     use rand::{distributions::uniform::SampleUniform, seq::index::IndexVec, Rng};
 
     #[derive(Debug)]
     pub enum WeightedError {
         InvalidWeight,
+    }
+
+    impl fmt::Display for WeightedError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match self {
+                WeightedError::InvalidWeight => write!(f, "invalid weight"),
+            }
+        }
     }
 
     /// Randomly sample exactly `amount` distinct indices from `0..length`, and
@@ -115,7 +126,7 @@ mod sampling {
         length: usize,
         weight: F,
         amount: usize,
-    ) -> Result<IndexVec, WeightedError>
+    ) -> Result<IndexVec>
     where
         R: Rng + ?Sized,
         F: Fn(usize) -> X,
@@ -148,7 +159,7 @@ mod sampling {
         length: N,
         weight: F,
         amount: N,
-    ) -> Result<IndexVec, WeightedError>
+    ) -> Result<IndexVec>
     where
         R: Rng + ?Sized,
         F: Fn(usize) -> X,
@@ -232,7 +243,7 @@ mod sampling {
             while index < length {
                 let weight = weight(index.as_usize()).into();
                 if !(weight >= 0.) {
-                    return Err(WeightedError::InvalidWeight);
+                    return Err(anyhow::Error::msg(WeightedError::InvalidWeight));
                 }
 
                 let key = rng.gen::<f64>().powf(1.0 / weight);

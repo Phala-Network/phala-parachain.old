@@ -39,6 +39,7 @@ serde = { git = "https://github.com/mesalock-linux/serde-sgx.git", features = ["
 serde_json = { git = "https://github.com/mesalock-linux/serde-json-sgx.git" }
 serde_cbor = { git = "https://github.com/mesalock-linux/cbor-sgx.git" }
 
+anyhow      = { version = "1.0", default-features = false }
 bit-vec     = { version = "*", default-features = false }
 itertools   = { version = "0.8", default-features = false }
 lazy_static = { version = "*", default-features = false, features = ["spin_no_std"] }
@@ -46,11 +47,11 @@ lazy_static = { version = "*", default-features = false, features = ["spin_no_st
 sp-io                = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
 sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, features = ["disable_target_static_assertions"] }
 sp-runtime           = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
-parity-scale-codec   = { package = "parity-scale-codec", version = "2.1.0", default-features = false, features = ["derive"] }
+parity-scale-codec   = { version = "2.1.0", default-features = false, features = ["derive"] }
 
 # Phala specific
 runtime = { path = "../../collator/runtime", package = "phala-parachain-runtime", default-features = false, features = ["native-nostd"] }
-pallet-phala = { package = "pallet-phala", path = "../../pallets/phala", default-features = false }
+pallet-phala = { path = "../../pallets/phala", default-features = false }
 phala-types = { path = "../../common/types", default-features = false, features = ["enable_serde", "pruntime"] }
 
 csv-core = { version = "0.1.10", default-features = false }
@@ -58,16 +59,27 @@ csv-core = { version = "0.1.10", default-features = false }
 # for light_validation
 derive_more = "0.99.0"
 log = { git = "https://github.com/mesalock-linux/log-sgx" }
+env_logger = { git = "https://github.com/mesalock-linux/env_logger-sgx" }
 hash-db = { version = "0.15.2", default-features = false }
 num = { package = "num-traits", version = "0.2", default-features = false }
 finality-grandpa = { version = "0.14", default-features = false, features = ["derive-codec"] }
 trie = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", package = "sp-trie", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", package = "frame-system", default-features = false }
 sp-finality-grandpa = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false }
 sp-application-crypto = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, features = ["full_crypto"] }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "rococo-v1", default-features = false, features = ["full_crypto"] }
+
 fixed = { git = "https://github.com/encointer/substrate-fixed", package = "substrate-fixed", default-features = false }
-xcm = { git = "https://github.com/paritytech/polkadot", branch = "rococo-v1", default-features = false }
+
+# for diem
+bcs = { path = "../../vendor/diem/vendor/bcs", version = "0.1.2" }
+diem-types = { path = "../../vendor/diem/types", version = "0.1.0" }
+diem-crypto = { path = "../../vendor/diem/crypto/crypto", version = "0.1.0" }
+move-core-types = { path = "../../vendor/diem/language/move-core/types", version = "0.1.0" }
+transaction-builder = { path = "../../vendor/diem/language/transaction-builder", version = "0.1.0" }
+
+# Ink! Runtime
+pink = { git = "https://github.com/Phala-Network/pink-sgx" }
 
 [patch.'https://github.com/apache/teaclave-sgx-sdk.git']
 sgx_alloc = { git = "https://github.com/Phala-Network/incubator-teaclave-sgx-sdk.git" }
@@ -97,3 +109,11 @@ sgx_types = { git = "https://github.com/Phala-Network/incubator-teaclave-sgx-sdk
 #sgx_ucrypto = { git = "https://github.com/Phala-Network/incubator-teaclave-sgx-sdk.git" }
 sgx_unwind = { git = "https://github.com/Phala-Network/incubator-teaclave-sgx-sdk.git" }
 #sgx_urts = { git = "https://github.com/Phala-Network/incubator-teaclave-sgx-sdk.git" }
+
+#[patch.'https://github.com/paritytech/polkadot']
+#pallet-xcm = { path = "../../forks/xcm/pallet-xcm", default-features = false }
+#
+#[patch.'https://github.com/paritytech/cumulus']
+#cumulus-pallet-parachain-system = { path = "../../forks/pallets/parachain-system", default-features = false }
+#cumulus-pallet-xcmp-queue = { path = "../../forks/pallets/xcmp-queue", default-features = false }
+#cumulus-pallet-xcm = { path = "../../forks/pallets/xcm", default-features = false }

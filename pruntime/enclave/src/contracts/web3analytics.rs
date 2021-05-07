@@ -6,6 +6,8 @@ use crate::std::collections::BTreeMap;
 use crate::std::collections::HashMap;
 use crate::std::prelude::v1::*;
 use crate::std::vec::Vec;
+use anyhow::Result;
+use core::fmt;
 use serde::{Deserialize, Serialize};
 
 use crate::contracts;
@@ -126,6 +128,15 @@ pub enum Error {
     Other(String),
 }
 
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::NotAuthorized => write!(f, "not authorized"),
+            Error::Other(e) => write!(f, "{}", e),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
     SetConfiguration { skip_stat: bool },
@@ -205,7 +216,7 @@ pub enum Response {
         skip_stat: bool,
     },
 
-    Error(Error),
+    Error(#[serde(with = "super::serde_anyhow")] anyhow::Error),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -841,12 +852,12 @@ impl Web3Analytics {
     fn update_total_stat(&mut self, total_stat: HourlyPageViewStat, count_str: String) {
         self.total_stat = HourlyPageViewStat::default();
 
-        if !self.encrypted.clone() {
+        if !self.encrypted {
             return;
         }
 
         let mut count = self.decrypt(total_stat.pv_count).parse::<u32>().unwrap();
-        if count_str != "" {
+        if !count_str.is_empty() {
             count += self.decrypt(count_str).parse::<u32>().unwrap();
         }
 
@@ -900,7 +911,7 @@ impl contracts::Contract<Command, Request, Response> for Web3Analytics {
         let status = match cmd {
             Command::SetConfiguration { skip_stat } => {
                 let o = AccountIdWrapper(origin.clone());
-                println!("SetConfiguration: [{}] -> {}", o.to_string(), skip_stat);
+                log::info!("SetConfiguration: [{}] -> {}", o.to_string(), skip_stat);
 
                 if skip_stat {
                     self.no_tracking.insert(o, skip_stat);
@@ -916,7 +927,7 @@ impl contracts::Contract<Command, Request, Response> for Web3Analytics {
     }
 
     fn handle_query(&mut self, origin: Option<&chain::AccountId>, req: Request) -> Response {
-        let inner = || -> Result<Response, Error> {
+        let inner = || -> Result<Response> {
             match req {
                 Request::SetPageView {
                     page_views,
@@ -956,7 +967,7 @@ impl contracts::Contract<Command, Request, Response> for Web3Analytics {
                     self.update_online_users(start, end);
                     Ok(Response::GetOnlineUsers {
                         online_users: self.online_users.clone(),
-                        encrypted: self.encrypted.clone(),
+                        encrypted: self.encrypted,
                     })
                 }
                 Request::GetHourlyStats {
@@ -967,14 +978,14 @@ impl contracts::Contract<Command, Request, Response> for Web3Analytics {
                     self.update_hourly_stats(start, end, start_of_week);
                     Ok(Response::GetHourlyStats {
                         hourly_stat: self.hourly_stat.clone(),
-                        encrypted: self.encrypted.clone(),
+                        encrypted: self.encrypted,
                     })
                 }
                 Request::GetDailyStats { daily_stat } => {
                     self.update_daily_stats(daily_stat);
                     Ok(Response::GetDailyStats {
                         daily_stat: self.daily_stat.clone(),
-                        encrypted: self.encrypted.clone(),
+                        encrypted: self.encrypted,
                     })
                 }
                 Request::GetWeeklySites {
@@ -984,7 +995,7 @@ impl contracts::Contract<Command, Request, Response> for Web3Analytics {
                     self.update_weekly_sites(weekly_sites_in_db, weekly_sites_new);
                     Ok(Response::GetWeeklySites {
                         weekly_sites: self.weekly_sites.clone(),
-                        encrypted: self.encrypted.clone(),
+                        encrypted: self.encrypted,
                     })
                 }
                 Request::GetWeeklyDevices {
@@ -994,19 +1005,19 @@ impl contracts::Contract<Command, Request, Response> for Web3Analytics {
                     self.update_weekly_devices(weekly_devices_in_db, weekly_devices_new);
                     Ok(Response::GetWeeklyDevices {
                         weekly_devices: self.weekly_devices.clone(),
-                        encrypted: self.encrypted.clone(),
+                        encrypted: self.encrypted,
                     })
                 }
                 Request::GetTotalStat { total_stat, count } => {
                     self.update_total_stat(total_stat, count);
                     Ok(Response::GetTotalStat {
                         total_stat: self.total_stat.clone(),
-                        encrypted: self.encrypted.clone(),
+                        encrypted: self.encrypted,
                     })
                 }
                 Request::GetConfiguration { account } => {
                     if origin == None || origin.unwrap() != &account.0 {
-                        return Err(Error::NotAuthorized);
+                        return Err(anyhow::Error::msg(Error::NotAuthorized));
                     }
 
                     let mut off = false;

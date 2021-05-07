@@ -1,4 +1,7 @@
 use crate::std::prelude::v1::*;
+use anyhow::Result;
+use core::fmt;
+use log::info;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -32,6 +35,19 @@ pub enum TransactionStatus {
     FailedToSign,
     BadDecimal,
     DestroyNotAllowed,
+    // for pdiem
+    BadAccountInfo,
+    BadLedgerInfo,
+    BadTrustedStateData,
+    BadEpochChangedProofData,
+    BadTrustedState,
+    InvalidAccount,
+    BadTransactionWithProof,
+    FailedToVerify,
+    FailedToGetTransaction,
+    FailedToCalculateBalance,
+    BadChainId,
+    TransferringNotAllowed,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -70,7 +86,7 @@ impl System {
         self.id_key = Some(pair.clone());
         self.id_pubkey = raw_pubkey.to_vec();
         self.hashed_id = pkh.into();
-        println!("System::set_id: hashed identity key: {:?}", self.hashed_id);
+        info!("System::set_id: hashed identity key: {:?}", self.hashed_id);
     }
 
     pub fn set_machine_id(&mut self, machine_id: Vec<u8>) {
@@ -90,20 +106,23 @@ impl System {
         accid_origin: Option<&chain::AccountId>,
         req: Request,
     ) -> Response {
-        let inner = || -> Result<Response, Error> {
+        let inner = || -> Result<Response> {
             match req {
                 Request::QueryReceipt { command_index } => match self.get_receipt(command_index) {
                     Some(receipt) => {
-                        let origin = accid_origin.ok_or(Error::NotAuthorized)?;
+                        let origin =
+                            accid_origin.ok_or_else(|| anyhow::Error::msg(Error::NotAuthorized))?;
                         if receipt.account == AccountIdWrapper(origin.clone()) {
                             Ok(Response::QueryReceipt {
                                 receipt: receipt.clone(),
                             })
                         } else {
-                            Err(Error::NotAuthorized)
+                            Err(anyhow::Error::msg(Error::NotAuthorized))
                         }
                     }
-                    None => Err(Error::Other(String::from("Transaction hash not found"))),
+                    None => Err(anyhow::Error::msg(Error::Other(String::from(
+                        "Transaction hash not found",
+                    )))),
                 },
                 Request::GetWorkerEgress { start_sequence } => {
                     let pending_msgs: Vec<SignedWorkerMessage> = self
@@ -115,7 +134,7 @@ impl System {
                         .collect();
                     Ok(Response::GetWorkerEgress {
                         length: pending_msgs.len(),
-                        encoded_egreee_b64: base64::encode(&pending_msgs.encode()),
+                        encoded_egress_b64: base64::encode(&pending_msgs.encode()),
                     })
                 } // If we add more unhandled queries:
                   //   _ => Err(Error::Other("Unknown command".to_string()))
@@ -140,8 +159,8 @@ impl System {
         &mut self,
         blocknum: chain::BlockNumber,
         reward_info: &BlockRewardInfo,
-    ) -> Result<(), Error> {
-        println!(
+    ) -> Result<()> {
+        info!(
             "System::handle_reward_seed({}, {:?})",
             blocknum, reward_info
         );
@@ -151,7 +170,7 @@ impl System {
 
         // Push queue when necessary
         if online_hit || compute_hit {
-            println!(
+            info!(
                 "System::handle_reward_seed: x={}, online={}, compute={}, elected={}",
                 x, reward_info.online_target, reward_info.compute_target, self.comp_elected,
             );
@@ -173,13 +192,13 @@ impl System {
         &mut self,
         seed: U256,
         worker_snapshot: Option<&super::OnlineWorkerSnapshot>,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         if let Some(worker_snapshot) = worker_snapshot {
-            println!("System::handle_new_round: new round");
+            info!("System::handle_new_round: new round");
             self.comp_elected =
                 comp_election::elect(seed.low_u64(), &worker_snapshot, &self.machine_id);
         } else {
-            println!("System::handle_new_round: no snapshot found; skipping this round");
+            info!("System::handle_new_round: no snapshot found; skipping this round");
             self.comp_elected = false;
         }
         Ok(())
@@ -198,27 +217,27 @@ impl<'a> EventHandler<'a> {
         &mut self,
         block_context: &'a super::BlockHeaderWithEvents,
         event: &PhalaEvent,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         match event {
             // Reset the egress queue once we detected myself is re-registered
             phala::RawEvent::WorkerRegistered(_stash, pubkey, _machine_id) => {
                 if pubkey == &self.system.id_pubkey {
-                    println!("System::handle_event: Reset MsgChannel due to WorkerRegistered");
+                    info!("System::handle_event: Reset MsgChannel due to WorkerRegistered");
                     self.system.egress = Default::default();
                 }
             }
-            phala::RawEvent::WorkerRenewed(_stash, machine_id) => {
+            phala::RawEvent::WorkerReset(_stash, machine_id) => {
                 // Not perfect because we only have machine_id but not pubkey here.
                 if machine_id == &self.system.machine_id {
-                    println!("System::handle_event: Reset MsgChannel due to WorkerRenewed");
+                    info!("System::handle_event: Reset MsgChannel due to WorkerReset");
                     self.system.egress = Default::default();
                 }
             }
             // Handle other events
             phala::RawEvent::WorkerMessageReceived(_stash, pubkey, seq) => {
-                println!("System::handle_event: Message confirmed (seq={})", seq);
                 // Advance the egress queue messages
                 if pubkey == &self.system.id_pubkey {
+                    info!("System::handle_event: Message confirmed (seq={})", seq);
                     self.system.egress.received(*seq);
                 }
             }
@@ -228,7 +247,7 @@ impl<'a> EventHandler<'a> {
                 self.system.handle_reward_seed(blocknum, &reward_info)?;
             }
             phala::RawEvent::NewMiningRound(round) => {
-                println!("System::handle_event: new mining round ({})", round);
+                info!("System::handle_event: new mining round ({})", round);
                 // Save the snapshot for later use
                 self.snapshot = block_context.worker_snapshot.as_ref();
                 self.new_round = true;
@@ -256,6 +275,16 @@ pub enum Error {
     Other(String),
 }
 
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::NotAuthorized => write!(f, "not authorized"),
+            Error::TxHashNotFound => write!(f, "transaction hash not found"),
+            Error::Other(e) => write!(f, "{}", e),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Request {
     QueryReceipt { command_index: CommandIndex },
@@ -269,7 +298,28 @@ pub enum Response {
     },
     GetWorkerEgress {
         length: usize,
-        encoded_egreee_b64: String,
+        encoded_egress_b64: String,
     },
-    Error(Error),
+    Error(#[serde(with = "serde_anyhow")] anyhow::Error),
+}
+
+pub mod serde_anyhow {
+    use crate::std::string::{String, ToString};
+    use anyhow::Error;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S>(value: &Error, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = value.to_string();
+        String::serialize(&s, serializer)
+    }
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Error, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(Error::msg(s))
+    }
 }

@@ -1,10 +1,13 @@
 #![feature(decl_macro)]
 
+extern crate env_logger;
 extern crate sgx_types;
 extern crate sgx_urts;
 extern crate mio;
 #[macro_use]
 extern crate lazy_static;
+#[macro_use]
+extern crate log;
 
 #[macro_use]
 extern crate rocket;
@@ -63,6 +66,9 @@ lazy_static! {
     };
     static ref ALLOW_CORS: bool = {
         env::var("ALLOW_CORS").unwrap_or_else(|_| "".to_string()) != ""
+    };
+    static ref ENABLE_KICK_API: bool = {
+        env::var("ENABLE_KICK_API").unwrap_or_else(|_| "".to_string()) != ""
     };
 }
 
@@ -145,7 +151,7 @@ fn ocall_load_ias_key(
 pub extern "C"
 fn ocall_sgx_init_quote(ret_ti: *mut sgx_target_info_t,
                         ret_gid : *mut sgx_epid_group_id_t) -> sgx_status_t {
-    println!("Entering ocall_sgx_init_quote");
+    info!("Entering ocall_sgx_init_quote");
     unsafe { sgx_init_quote(ret_ti, ret_gid) }
 }
 
@@ -161,7 +167,7 @@ fn ocall_get_quote (p_sigrl            : *const u8,
                     p_quote            : *mut u8,
                     _maxlen            : u32,
                     p_quote_len        : *mut u32) -> sgx_status_t {
-    println!("Entering ocall_get_quote");
+    info!("Entering ocall_get_quote");
 
     let mut real_quote_len : u32 = 0;
 
@@ -170,11 +176,11 @@ fn ocall_get_quote (p_sigrl            : *const u8,
     };
 
     if ret != sgx_status_t::SGX_SUCCESS {
-        println!("sgx_calc_quote_size returned {}", ret);
+        warn!("sgx_calc_quote_size returned {}", ret);
         return ret;
     }
 
-    println!("quote size = {}", real_quote_len);
+    info!("quote size = {}", real_quote_len);
     unsafe { *p_quote_len = real_quote_len; }
 
     let ret = unsafe {
@@ -190,11 +196,11 @@ fn ocall_get_quote (p_sigrl            : *const u8,
     };
 
     if ret != sgx_status_t::SGX_SUCCESS {
-        println!("sgx_calc_quote_size returned {}", ret);
+        warn!("sgx_calc_quote_size returned {}", ret);
         return ret;
     }
 
-    println!("sgx_calc_quote_size returned {}", ret);
+    info!("sgx_calc_quote_size returned {}", ret);
     ret
 }
 
@@ -229,12 +235,12 @@ fn ocall_save_persistent_data(
     input_len: usize
 ) -> sgx_status_t {
     let input_slice = unsafe { std::slice::from_raw_parts(input_ptr, input_len) };
-    println!("Sealed data {:}: {:?}", input_len, hex::encode(input_slice));
+    debug!("Sealed data {:}: {:?}", input_len, hex::encode(input_slice));
 
     let executable = env::current_exe().unwrap();
     let path = executable.parent().unwrap();
     let state_path: path::PathBuf = path.join(*ENCLAVE_STATE_FILE_PATH).join(ENCLAVE_STATE_FILE);
-    println!("Save seal data to {}", state_path.as_path().to_str().unwrap());
+    info!("Save seal data to {}", state_path.as_path().to_str().unwrap());
 
     fs::write(state_path.as_path().to_str().unwrap(), input_slice)
         .expect("Failed to write persistent data");
@@ -263,7 +269,7 @@ fn ocall_load_persistent_data(
         return sgx_status_t::SGX_SUCCESS
     }
 
-    println!("Loaded sealed data {:}: {:?}", state_len, state);
+    info!("Loaded sealed data {:}: {:?}", state_len, state);
 
     unsafe {
         if state_len <= output_buf_len {
@@ -298,7 +304,7 @@ fn init_enclave() -> SgxResult<SgxEnclave> {
 
 #[post("/test", format = "json", data = "<contract_input>")]
 fn test(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -326,7 +332,7 @@ fn test(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
@@ -337,7 +343,7 @@ fn test(contract_input: Json<ContractInput>) -> JsonValue {
 
 #[post("/init_runtime", format = "json", data = "<contract_input>")]
 fn init_runtime(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -365,7 +371,7 @@ fn init_runtime(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
@@ -376,7 +382,7 @@ fn init_runtime(contract_input: Json<ContractInput>) -> JsonValue {
 
 #[post("/get_info", format = "json", data = "<contract_input>")]
 fn get_info(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -404,7 +410,7 @@ fn get_info(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
@@ -415,7 +421,7 @@ fn get_info(contract_input: Json<ContractInput>) -> JsonValue {
 
 #[post("/get_runtime_info", format = "json", data = "<contract_input>")]
 fn get_runtime_info(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -443,7 +449,7 @@ fn get_runtime_info(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
@@ -454,7 +460,7 @@ fn get_runtime_info(contract_input: Json<ContractInput>) -> JsonValue {
 
 #[post("/dump_states", format = "json", data = "<contract_input>")]
 fn dump_states(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -482,7 +488,7 @@ fn dump_states(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
@@ -493,7 +499,7 @@ fn dump_states(contract_input: Json<ContractInput>) -> JsonValue {
 
 #[post("/load_states", format = "json", data = "<contract_input>")]
 fn load_states(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -521,7 +527,7 @@ fn load_states(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
@@ -532,7 +538,7 @@ fn load_states(contract_input: Json<ContractInput>) -> JsonValue {
 
 #[post("/sync_header", format = "json", data = "<contract_input>")]
 fn sync_header(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -560,46 +566,7 @@ fn sync_header(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
-            json!({
-                "status": "error",
-                "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
-            })
-        }
-    }
-}
-
-#[post("/sync_parachain_header", format = "json", data = "<contract_input>")]
-fn sync_parachain_header(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
-
-    let eid = get_eid();
-
-    let input_string = serde_json::to_string(&*contract_input).unwrap();
-    let mut return_output_buf = vec![0; ENCLAVE_OUTPUT_BUF_MAX_LEN].into_boxed_slice();
-    let mut output_len : usize = 0;
-    let output_slice = &mut return_output_buf;
-    let output_ptr = output_slice.as_mut_ptr();
-    let output_len_ptr = &mut output_len as *mut usize;
-
-    let mut retval = sgx_status_t::SGX_SUCCESS;
-    let result = unsafe {
-        ecall_handle(
-            eid, &mut retval,
-            13,
-            input_string.as_ptr(), input_string.len(),
-            output_ptr, output_len_ptr, ENCLAVE_OUTPUT_BUF_MAX_LEN
-        )
-    };
-
-    match result {
-        sgx_status_t::SGX_SUCCESS => {
-            let output_slice = unsafe { std::slice::from_raw_parts(output_ptr, output_len) };
-            let output_value: serde_json::value::Value = serde_json::from_slice(output_slice).unwrap();
-            json!(output_value)
-        },
-        _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
@@ -610,7 +577,7 @@ fn sync_parachain_header(contract_input: Json<ContractInput>) -> JsonValue {
 
 #[post("/query", format = "json", data = "<contract_input>")]
 fn query(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -639,7 +606,7 @@ fn query(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
@@ -650,7 +617,7 @@ fn query(contract_input: Json<ContractInput>) -> JsonValue {
 
 #[post("/dispatch_block", format = "json", data = "<contract_input>")]
 fn dispatch_block(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -678,7 +645,7 @@ fn dispatch_block(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
@@ -689,7 +656,7 @@ fn dispatch_block(contract_input: Json<ContractInput>) -> JsonValue {
 
 #[post("/set", format = "json", data = "<contract_input>")]
 fn set(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -718,7 +685,7 @@ fn set(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
@@ -729,7 +696,7 @@ fn set(contract_input: Json<ContractInput>) -> JsonValue {
 
 #[post("/get", format = "json", data = "<contract_input>")]
 fn get(contract_input: Json<ContractInput>) -> JsonValue {
-    println!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
 
     let eid = get_eid();
 
@@ -758,13 +725,62 @@ fn get(contract_input: Json<ContractInput>) -> JsonValue {
             json!(output_value)
         },
         _ => {
-            println!("[-] ECALL Enclave Failed {}!", result.as_str());
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
             json!({
                 "status": "error",
                 "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
             })
         }
     }
+}
+
+#[post("/test_ink", format = "json", data = "<contract_input>")]
+fn test_ink(contract_input: Json<ContractInput>) -> JsonValue {
+    debug!("{}", ::serde_json::to_string_pretty(&*contract_input).unwrap());
+
+    let eid = get_eid();
+
+    let input_string = serde_json::to_string(&*contract_input).unwrap();
+
+    let mut return_output_buf = vec![0; ENCLAVE_OUTPUT_BUF_MAX_LEN].into_boxed_slice();
+    let mut output_len : usize = 0;
+    let output_slice = &mut return_output_buf;
+    let output_ptr = output_slice.as_mut_ptr();
+    let output_len_ptr = &mut output_len as *mut usize;
+
+    let mut retval = sgx_status_t::SGX_SUCCESS;
+    let result = unsafe {
+        ecall_handle(
+            eid, &mut retval,
+            100,
+            input_string.as_ptr(), input_string.len(),
+            output_ptr, output_len_ptr, ENCLAVE_OUTPUT_BUF_MAX_LEN
+        )
+    };
+
+    match result {
+        sgx_status_t::SGX_SUCCESS => {
+            let output_slice = unsafe { std::slice::from_raw_parts(output_ptr, output_len) };
+            let output_value: serde_json::value::Value = serde_json::from_slice(output_slice).unwrap();
+            json!(output_value)
+        },
+        _ => {
+            error!("[-] ECALL Enclave Failed {}!", result.as_str());
+            json!({
+                "status": "error",
+                "payload": format!("[-] ECALL Enclave Failed {}!", result.as_str())
+            })
+        }
+    }
+}
+
+#[post("/kick")]
+fn kick() {
+    // TODO: we should improve this
+    info!("Kick API received, destroying enclave...");
+    destroy_enclave();
+
+    std::process::exit(0);
 }
 
 fn cors_options() -> CorsOptions {
@@ -787,12 +803,16 @@ fn rocket() -> rocket::Rocket {
             test, init_runtime, get_info,
             dump_states, load_states,
             sync_header, dispatch_block, query,
-            set, get, get_runtime_info,
-            sync_parachain_header],
-		);
+            set, get, get_runtime_info, test_ink]);
+
+    if *ENABLE_KICK_API {
+        info!("ENABLE `kick` API");
+
+        server = server.mount("/", routes![kick]);
+    }
 
     if *ALLOW_CORS {
-        println!("Allow CORS");
+        info!("Allow CORS");
 
         server
             .mount("/", rocket_cors::catch_all_options_routes()) // mount the catch all routes
@@ -807,9 +827,14 @@ fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     env::set_var("ROCKET_ENV", "dev");
 
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .parse_default_env()
+        .init();
+
     let enclave = match init_enclave() {
         Ok(r) => {
-            println!("[+] Init Enclave Successful {}!", r.geteid());
+            info!("[+] Init Enclave Successful {}!", r.geteid());
             r
         },
         Err(x) => {
@@ -831,7 +856,7 @@ fn main() {
 
     rocket().launch();
 
-    println!("Quit signal received, destroying enclave...");
+    info!("Quit signal received, destroying enclave...");
     destroy_enclave();
 
     std::process::exit(0);

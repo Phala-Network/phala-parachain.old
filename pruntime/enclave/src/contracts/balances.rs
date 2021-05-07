@@ -2,7 +2,9 @@ use crate::std::collections::BTreeMap;
 use crate::std::string::String;
 use crate::std::vec::Vec;
 
-use core::str;
+use anyhow::Result;
+use core::{fmt, str};
+use log::{debug, info};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use sp_core::crypto::Pair;
@@ -32,6 +34,15 @@ pub struct Balances {
 pub enum Error {
     NotAuthorized,
     Other(String),
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::NotAuthorized => write!(f, "not authorized"),
+            Error::Other(e) => write!(f, "{}", e),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -78,7 +89,7 @@ pub enum Response {
     PendingChainTransfer {
         transfer_queue_b64: String,
     },
-    Error(Error),
+    Error(#[serde(with = "super::serde_anyhow")] anyhow::Error),
 }
 
 const SUPPLY: u128 = 0;
@@ -111,7 +122,7 @@ impl contracts::Contract<Command, Request, Response> for Balances {
         let status = match cmd {
             Command::Transfer { dest, value } => {
                 let o = AccountIdWrapper(origin.clone());
-                println!(
+                info!(
                     "Transfer: [{}] -> [{}]: {}",
                     o.to_string(),
                     dest.to_string(),
@@ -130,8 +141,8 @@ impl contracts::Contract<Command, Request, Response> for Balances {
                             self.accounts.insert(dest, value);
                         }
 
-                        println!("   src: {:>20} -> {:>20}", src0, src0 - value);
-                        println!("  dest: {:>20} -> {:>20}", dest0, dest0 + value);
+                        info!("   src: {:>20} -> {:>20}", src0, src0 - value);
+                        info!("  dest: {:>20} -> {:>20}", dest0, dest0 + value);
 
                         TransactionStatus::Ok
                     } else {
@@ -143,7 +154,7 @@ impl contracts::Contract<Command, Request, Response> for Balances {
             }
             Command::TransferToChain { dest, value } => {
                 let o = AccountIdWrapper(origin.clone());
-                println!(
+                info!(
                     "Transfer to chain: [{}] -> [{}]: {}",
                     o.to_string(),
                     dest.to_string(),
@@ -158,7 +169,7 @@ impl contracts::Contract<Command, Request, Response> for Balances {
                         let src0 = *src_amount;
                         *src_amount -= value;
                         self.total_issuance -= value;
-                        println!("   src: {:>20} -> {:>20}", src0, src0 - value);
+                        info!("   src: {:>20} -> {:>20}", src0, src0 - value);
                         let sequence = self.sequence + 1;
 
                         let data = Transfer {
@@ -190,11 +201,11 @@ impl contracts::Contract<Command, Request, Response> for Balances {
     }
 
     fn handle_query(&mut self, origin: Option<&chain::AccountId>, req: Request) -> Response {
-        let inner = || -> Result<Response, Error> {
+        let inner = || -> Result<Response> {
             match req {
                 Request::FreeBalance { account } => {
                     if origin == None || origin.unwrap() != &account.0 {
-                        return Err(Error::NotAuthorized);
+                        return Err(anyhow::Error::msg(Error::NotAuthorized));
                     }
                     let mut balance: chain::Balance = 0;
                     if let Some(ba) = self.accounts.get(&account) {
@@ -203,7 +214,7 @@ impl contracts::Contract<Command, Request, Response> for Balances {
                     Ok(Response::FreeBalance { balance })
                 }
                 Request::PendingChainTransfer { sequence } => {
-                    println!("PendingChainTransfer");
+                    info!("PendingChainTransfer");
                     let transfer_queue: Vec<&TransferData> = self
                         .queue
                         .iter()
@@ -228,20 +239,20 @@ impl contracts::Contract<Command, Request, Response> for Balances {
     fn handle_event(&mut self, ce: chain::Event) {
         if let chain::Event::pallet_phala(pe) = ce {
             if let phala::RawEvent::TransferToTee(who, amount) = pe {
-                println!("TransferToTee from :{:?}, {:}", who, amount);
+                info!("TransferToTee from :{:?}, {:}", who, amount);
                 let dest = AccountIdWrapper(who);
-                println!("   dest: {}", dest.to_string());
+                info!("   dest: {}", dest.to_string());
                 if let Some(dest_amount) = self.accounts.get_mut(&dest) {
                     let dest_amount0 = *dest_amount;
                     *dest_amount += amount;
-                    println!("   value: {:>20} -> {:>20}", dest_amount0, *dest_amount);
+                    info!("   value: {:>20} -> {:>20}", dest_amount0, *dest_amount);
                 } else {
                     self.accounts.insert(dest, amount);
-                    println!("   value: {:>20} -> {:>20}", 0, amount);
+                    info!("   value: {:>20} -> {:>20}", 0, amount);
                 }
                 self.total_issuance += amount;
             } else if let phala::RawEvent::TransferToChain(who, amount, sequence) = pe {
-                println!("TransferToChain who: {:?}, amount: {:}", who, amount);
+                info!("TransferToChain who: {:?}, amount: {:}", who, amount);
                 let transfer_data = TransferData {
                     data: Transfer {
                         dest: AccountIdWrapper(who),
@@ -250,10 +261,10 @@ impl contracts::Contract<Command, Request, Response> for Balances {
                     },
                     signature: Vec::new(),
                 };
-                println!("transfer data:{:?}", transfer_data);
+                debug!("transfer data:{:?}", transfer_data);
                 self.queue
                     .retain(|x| x.data.sequence > transfer_data.data.sequence);
-                println!("queue len: {:}", self.queue.len());
+                info!("queue len: {:}", self.queue.len());
             }
         }
     }

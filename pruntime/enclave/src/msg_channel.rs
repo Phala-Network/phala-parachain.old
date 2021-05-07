@@ -31,9 +31,10 @@ impl MsgChannel {
     pub fn received(&mut self, seq: u64) {
         if seq > self.sequence {
             // Something bad happened
-            println!(
+            log::error!(
                 "MsgChannel::received(): error - received seq {} larger than max seq {}",
-                seq, self.sequence
+                seq,
+                self.sequence
             );
             return;
         }

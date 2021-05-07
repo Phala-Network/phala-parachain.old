@@ -91,6 +91,9 @@ use xcm_builder::{
 	AllowUnpaidExecutionFrom, ParentAsSuperuser,
 };
 use xcm_executor::{Config, XcmExecutor};
+
+// Default XCM Transactor
+// use xcm_builder::{CurrencyAdapter, IsConcrete};
 // Custom XCM Transactor
 pub mod xcm_transactor;
 
